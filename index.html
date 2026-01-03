@@ -220,6 +220,93 @@
       color: var(--azulejo-blue);
     }
 
+    /* Resume Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 340px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-content h3 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.4em;
+      color: var(--azulejo-dark);
+      margin-bottom: 8px;
+    }
+
+    .modal-content .recipe-name {
+      font-size: 1.1em;
+      color: var(--azulejo-blue);
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-buttons .btn-resume {
+      background: linear-gradient(135deg, var(--success-green) 0%, #1e5a3f 100%);
+      color: white;
+      border: none;
+      padding: 16px 24px;
+      font-size: 1.05em;
+      font-weight: 600;
+      font-family: inherit;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .modal-buttons .btn-fresh {
+      background: white;
+      color: var(--text-dark);
+      border: 2px solid var(--border-light);
+      padding: 14px 24px;
+      font-size: 1em;
+      font-weight: 500;
+      font-family: inherit;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-buttons .btn-fresh:hover {
+      border-color: var(--azulejo-blue);
+      color: var(--azulejo-blue);
+    }
+
     /* Info box with tile pattern accent */
     .info-box {
       background: linear-gradient(135deg, rgba(30, 77, 140, 0.06) 0%, rgba(74, 124, 194, 0.04) 100%);
@@ -835,6 +922,18 @@
     <p class="subtitle">AI-powered cooking timers</p>
   </div>
 
+  <!-- Resume Recipe Modal -->
+  <div id="resume-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <h3>Resume Cooking?</h3>
+      <div id="resume-recipe-name" class="recipe-name"></div>
+      <div class="modal-buttons">
+        <button class="btn-resume" onclick="resumeRecipe()">▶️ Resume Cooking</button>
+        <button class="btn-fresh" onclick="startFresh()">🍳 Start Fresh</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Family Login Section (for shared encrypted keys) -->
   <div id="unlock-section">
     <div class="card">
@@ -1020,6 +1119,7 @@
     let currentInputMode = 'text';
     let selectedPhoto = null;
     let decryptedApiKey = null;
+    let pendingResumeData = null;
 
     // ==================== ENCRYPTION ====================
     async function deriveKey(passphrase, salt) {
@@ -1100,16 +1200,12 @@
         const activeRecipe = storage.get('activeRecipe');
         if (activeRecipe) {
           const data = JSON.parse(activeRecipe);
-          if (confirm(`Resume "${data.title}"?`)) {
-            steps = data.steps;
-            recipeTitle = data.title;
-            document.getElementById('unlock-section').style.display = 'none';
-            startCooking();
-            return;
-          } else {
-            storage.remove('activeRecipe');
-            storage.remove('timerStartTime');
-          }
+          // Store pending resume data and show modal
+          pendingResumeData = data;
+          document.getElementById('resume-recipe-name').textContent = `"${data.title}"`;
+          document.getElementById('unlock-section').style.display = 'none';
+          document.getElementById('resume-modal').style.display = 'flex';
+          return;
         }
 
         // Show recipe input screen (key already unlocked, hidden from family)
@@ -1122,6 +1218,30 @@
       } catch (e) {
         errorEl.textContent = 'Wrong password. Try again.';
       }
+    }
+
+    function resumeRecipe() {
+      if (pendingResumeData) {
+        steps = pendingResumeData.steps;
+        recipeTitle = pendingResumeData.title;
+        document.getElementById('resume-modal').style.display = 'none';
+        startCooking();
+      }
+      pendingResumeData = null;
+    }
+
+    function startFresh() {
+      storage.remove('activeRecipe');
+      storage.remove('timerStartTime');
+      storage.remove('timerPausedTime');
+      pendingResumeData = null;
+      document.getElementById('resume-modal').style.display = 'none';
+
+      // Show recipe input screen
+      document.getElementById('setup-section').style.display = 'block';
+      document.getElementById('api-key').closest('.input-group').style.display = 'none';
+      document.getElementById('passphrase').closest('.input-group').style.display = 'none';
+      document.querySelector('#setup-section .info-box').style.display = 'none';
     }
 
     function forgetKey() {
