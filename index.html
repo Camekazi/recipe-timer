@@ -20,7 +20,7 @@
     .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 0.9em; }
 
     /* Setup Section */
-    #setup-section { max-width: 500px; margin: 0 auto; }
+    #setup-section, #unlock-section { max-width: 500px; margin: 0 auto; }
 
     .input-group { margin-bottom: 20px; }
     .input-group label { display: block; margin-bottom: 8px; color: #ff6b35; font-weight: 600; }
@@ -33,7 +33,7 @@
       color: #eee;
       font-size: 1em;
     }
-    .input-group textarea { min-height: 120px; resize: vertical; }
+    .input-group textarea { min-height: 100px; resize: vertical; }
     .input-group input:focus, .input-group textarea:focus {
       outline: none;
       border-color: #ff6b35;
@@ -41,17 +41,17 @@
     .input-group small { display: block; margin-top: 8px; color: #888; font-size: 0.85em; }
     .input-group small a { color: #ff6b35; }
 
-    .warning-box {
-      background: rgba(251, 191, 36, 0.1);
-      border: 1px solid #fbbf24;
+    .info-box {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid #6366f1;
       border-radius: 8px;
       padding: 12px;
       margin-bottom: 20px;
       font-size: 0.9em;
-      color: #fbbf24;
+      color: #a5b4fc;
     }
 
-    #generate-btn {
+    .btn-primary {
       width: 100%;
       background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
       color: white;
@@ -62,8 +62,77 @@
       cursor: pointer;
       box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
     }
-    #generate-btn:hover { transform: scale(1.02); }
-    #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-primary:hover { transform: scale(1.02); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Input Mode Tabs */
+    .input-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .input-tab {
+      flex: 1;
+      padding: 12px;
+      background: #252545;
+      border: 2px solid #333;
+      border-radius: 10px;
+      color: #888;
+      cursor: pointer;
+      text-align: center;
+      font-size: 0.95em;
+    }
+    .input-tab.active {
+      border-color: #ff6b35;
+      color: #ff6b35;
+      background: rgba(255, 107, 53, 0.1);
+    }
+
+    /* Photo Input */
+    .photo-input {
+      display: none;
+    }
+    .photo-input.active { display: block; }
+    .text-input.active { display: block; }
+    .text-input { display: none; }
+
+    .photo-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .photo-btn {
+      flex: 1;
+      padding: 15px;
+      background: #252545;
+      border: 2px dashed #444;
+      border-radius: 12px;
+      color: #aaa;
+      cursor: pointer;
+      text-align: center;
+    }
+    .photo-btn:hover { border-color: #ff6b35; color: #ff6b35; }
+
+    .photo-preview {
+      display: none;
+      margin-bottom: 15px;
+    }
+    .photo-preview img {
+      max-width: 100%;
+      border-radius: 12px;
+      border: 2px solid #4ade80;
+    }
+    .photo-preview .remove-btn {
+      display: block;
+      margin-top: 10px;
+      padding: 8px;
+      background: #ef4444;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
 
     .cached-recipes { margin-top: 30px; }
     .cached-recipes h3 { color: #888; font-size: 0.9em; margin-bottom: 10px; }
@@ -93,7 +162,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Timer Section (reused from cod-fajitas) */
+    /* Timer Section */
     #timer-section { display: none; }
 
     .elapsed-time {
@@ -206,11 +275,43 @@
     #new-btn { background: #6366f1; color: white; }
 
     .error-msg { color: #ef4444; text-align: center; margin-top: 20px; }
+
+    .key-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .key-actions button {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background: transparent;
+      color: #888;
+      cursor: pointer;
+      font-size: 0.85em;
+    }
+    .key-actions button:hover { border-color: #ff6b35; color: #ff6b35; }
+
+    #unlock-section { display: none; }
   </style>
 </head>
 <body>
   <h1>Recipe Timer</h1>
   <p class="subtitle">AI-powered cooking timers</p>
+
+  <!-- Unlock Section (for encrypted keys) -->
+  <div id="unlock-section">
+    <div class="input-group">
+      <label>Enter your passphrase</label>
+      <input type="password" id="unlock-passphrase" placeholder="Your passphrase to unlock the API key">
+    </div>
+    <button class="btn-primary" onclick="unlockKey()">Unlock</button>
+    <div class="key-actions">
+      <button onclick="forgetKey()">Use Different Key</button>
+    </div>
+    <div id="unlock-error" class="error-msg"></div>
+  </div>
 
   <!-- Setup Section -->
   <div id="setup-section">
@@ -218,20 +319,53 @@
       <label>Gemini API Key</label>
       <input type="password" id="api-key" placeholder="Enter your Gemini API key">
       <small>
-        Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> (250 requests/day free)
+        Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> (250/day free)
       </small>
     </div>
 
-    <div class="warning-box">
-      Your API key is stored in your browser's localStorage. It's visible in DevTools. Only use keys with quota limits.
-    </div>
-
     <div class="input-group">
-      <label>What are you cooking?</label>
-      <textarea id="recipe-input" placeholder="e.g., Chicken stir fry with vegetables&#10;&#10;Or paste a full recipe with ingredients and steps..."></textarea>
+      <label>Passphrase (optional)</label>
+      <input type="password" id="passphrase" placeholder="Encrypt your key with a passphrase">
+      <small>If set, your key is encrypted. Leave blank for plain storage.</small>
     </div>
 
-    <button id="generate-btn" onclick="generateTimer()">Generate Timer</button>
+    <div class="info-box">
+      With a passphrase, your key is AES-256 encrypted. Without one, it's stored in plain text (visible in DevTools).
+    </div>
+
+    <!-- Input Mode Tabs -->
+    <div class="input-tabs">
+      <div class="input-tab active" onclick="setInputMode('text')">Type Recipe</div>
+      <div class="input-tab" onclick="setInputMode('photo')">Photo</div>
+    </div>
+
+    <!-- Text Input -->
+    <div id="text-input" class="text-input active">
+      <div class="input-group">
+        <label>What are you cooking?</label>
+        <textarea id="recipe-input" placeholder="e.g., Chicken stir fry with vegetables&#10;&#10;Or paste a full recipe..."></textarea>
+      </div>
+    </div>
+
+    <!-- Photo Input -->
+    <div id="photo-input" class="photo-input">
+      <div class="photo-buttons">
+        <label class="photo-btn" for="camera-input">
+          Take Photo
+          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none" onchange="handlePhoto(this)">
+        </label>
+        <label class="photo-btn" for="upload-input">
+          Upload Image
+          <input type="file" id="upload-input" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+        </label>
+      </div>
+      <div id="photo-preview" class="photo-preview">
+        <img id="preview-img" src="">
+        <button class="remove-btn" onclick="removePhoto()">Remove Photo</button>
+      </div>
+    </div>
+
+    <button id="generate-btn" class="btn-primary" onclick="generateTimer()">Generate Timer</button>
     <div id="error-msg" class="error-msg"></div>
 
     <div id="cached-section" class="cached-recipes" style="display: none;">
@@ -243,7 +377,7 @@
   <!-- Loading Section -->
   <div id="loading-section">
     <div class="spinner"></div>
-    <p>Generating your cooking timer...</p>
+    <p id="loading-text">Generating your cooking timer...</p>
   </div>
 
   <!-- Timer Section -->
@@ -295,17 +429,74 @@
     let pausedTime = null;
     let isPaused = false;
     let intervalId = null;
+    let currentInputMode = 'text';
+    let selectedPhoto = null;
+    let decryptedApiKey = null;
 
-    // Load saved API key
+    // ==================== ENCRYPTION ====================
+    async function deriveKey(passphrase, salt) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encryptApiKey(apiKey, passphrase) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(passphrase, salt);
+      const encrypted = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        new TextEncoder().encode(apiKey)
+      );
+      return {
+        salt: Array.from(salt),
+        iv: Array.from(iv),
+        ciphertext: Array.from(new Uint8Array(encrypted))
+      };
+    }
+
+    async function decryptApiKey(stored, passphrase) {
+      const salt = new Uint8Array(stored.salt);
+      const iv = new Uint8Array(stored.iv);
+      const ciphertext = new Uint8Array(stored.ciphertext);
+      const key = await deriveKey(passphrase, salt);
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        key,
+        ciphertext
+      );
+      return new TextDecoder().decode(decrypted);
+    }
+
+    // ==================== INIT ====================
     window.onload = function() {
-      const savedKey = storage.get('geminiApiKey');
-      if (savedKey) document.getElementById('api-key').value = savedKey;
+      // Check for encrypted key
+      const encryptedKey = storage.get('geminiKeyEncrypted');
+      const plainKey = storage.get('geminiApiKey');
+
+      if (encryptedKey) {
+        // Show unlock screen
+        document.getElementById('setup-section').style.display = 'none';
+        document.getElementById('unlock-section').style.display = 'block';
+      } else if (plainKey) {
+        document.getElementById('api-key').value = plainKey;
+        decryptedApiKey = plainKey;
+      }
 
       loadCachedRecipes();
 
       // Check for active timer session
       const activeRecipe = storage.get('activeRecipe');
-      if (activeRecipe) {
+      if (activeRecipe && decryptedApiKey) {
         const data = JSON.parse(activeRecipe);
         if (confirm(`Resume "${data.title}"?`)) {
           steps = data.steps;
@@ -318,6 +509,113 @@
       }
     };
 
+    async function unlockKey() {
+      const passphrase = document.getElementById('unlock-passphrase').value;
+      const errorEl = document.getElementById('unlock-error');
+
+      if (!passphrase) {
+        errorEl.textContent = 'Please enter your passphrase';
+        return;
+      }
+
+      try {
+        const stored = JSON.parse(storage.get('geminiKeyEncrypted'));
+        decryptedApiKey = await decryptApiKey(stored, passphrase);
+        document.getElementById('unlock-section').style.display = 'none';
+        document.getElementById('setup-section').style.display = 'block';
+        document.getElementById('api-key').value = '••••••••••••••••';
+        document.getElementById('api-key').disabled = true;
+
+        // Check for active recipe after unlock
+        const activeRecipe = storage.get('activeRecipe');
+        if (activeRecipe) {
+          const data = JSON.parse(activeRecipe);
+          if (confirm(`Resume "${data.title}"?`)) {
+            steps = data.steps;
+            recipeTitle = data.title;
+            startCooking();
+          }
+        }
+      } catch (e) {
+        errorEl.textContent = 'Wrong passphrase. Try again.';
+      }
+    }
+
+    function forgetKey() {
+      if (confirm('Remove saved API key? You\'ll need to enter it again.')) {
+        storage.remove('geminiKeyEncrypted');
+        storage.remove('geminiApiKey');
+        decryptedApiKey = null;
+        document.getElementById('unlock-section').style.display = 'none';
+        document.getElementById('setup-section').style.display = 'block';
+        document.getElementById('api-key').value = '';
+        document.getElementById('api-key').disabled = false;
+      }
+    }
+
+    // ==================== INPUT MODES ====================
+    function setInputMode(mode) {
+      currentInputMode = mode;
+      document.querySelectorAll('.input-tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.input-tab:${mode === 'text' ? 'first' : 'last'}-child`).classList.add('active');
+
+      document.getElementById('text-input').classList.toggle('active', mode === 'text');
+      document.getElementById('photo-input').classList.toggle('active', mode === 'photo');
+    }
+
+    function handlePhoto(input) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+
+        // Compress if too large (>4MB)
+        if (file.size > 4 * 1024 * 1024) {
+          compressImage(file).then(compressed => {
+            selectedPhoto = compressed;
+            showPhotoPreview(compressed);
+          });
+        } else {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            selectedPhoto = e.target.result;
+            showPhotoPreview(e.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+    }
+
+    function compressImage(file) {
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+          const maxSize = 1600;
+          let w = img.width, h = img.height;
+          if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize; }
+          else if (h > maxSize) { w = w * maxSize / h; h = maxSize; }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    function showPhotoPreview(dataUrl) {
+      document.getElementById('preview-img').src = dataUrl;
+      document.getElementById('photo-preview').style.display = 'block';
+    }
+
+    function removePhoto() {
+      selectedPhoto = null;
+      document.getElementById('photo-preview').style.display = 'none';
+      document.getElementById('camera-input').value = '';
+      document.getElementById('upload-input').value = '';
+    }
+
+    // ==================== RECIPE GENERATION ====================
     function loadCachedRecipes() {
       const cached = storage.get('cachedRecipes');
       if (!cached) return;
@@ -349,30 +647,86 @@
     }
 
     async function generateTimer() {
-      const apiKey = document.getElementById('api-key').value.trim();
+      const apiKeyInput = document.getElementById('api-key').value.trim();
+      const passphrase = document.getElementById('passphrase').value;
       const recipeInput = document.getElementById('recipe-input').value.trim();
       const errorEl = document.getElementById('error-msg');
 
+      // Get API key (either decrypted or from input)
+      let apiKey = decryptedApiKey || apiKeyInput;
+
       if (!apiKey) { errorEl.textContent = 'Please enter your API key'; return; }
-      if (!recipeInput) { errorEl.textContent = 'Please describe what you\'re cooking'; return; }
+      if (currentInputMode === 'text' && !recipeInput) {
+        errorEl.textContent = 'Please describe what you\'re cooking';
+        return;
+      }
+      if (currentInputMode === 'photo' && !selectedPhoto) {
+        errorEl.textContent = 'Please take or upload a photo';
+        return;
+      }
 
       errorEl.textContent = '';
-      storage.set('geminiApiKey', apiKey);
+
+      // Save API key (encrypted or plain)
+      if (!decryptedApiKey) {
+        if (passphrase) {
+          const encrypted = await encryptApiKey(apiKey, passphrase);
+          storage.set('geminiKeyEncrypted', JSON.stringify(encrypted));
+          storage.remove('geminiApiKey');
+        } else {
+          storage.set('geminiApiKey', apiKey);
+          storage.remove('geminiKeyEncrypted');
+        }
+        decryptedApiKey = apiKey;
+      }
 
       // Show loading
       document.getElementById('setup-section').style.display = 'none';
       document.getElementById('loading-section').style.display = 'block';
+      document.getElementById('loading-text').textContent =
+        currentInputMode === 'photo' ? 'Reading recipe from photo...' : 'Generating your cooking timer...';
 
       try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `Create a cooking timer for this recipe. Return ONLY valid JSON, no markdown.
+        // Build request based on input mode
+        let parts = [];
+
+        if (currentInputMode === 'photo') {
+          // Extract base64 data from data URL
+          const base64Data = selectedPhoto.split(',')[1];
+          const mimeType = selectedPhoto.split(';')[0].split(':')[1];
+
+          parts = [
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: base64Data
+              }
+            },
+            {
+              text: `Extract the recipe from this image and create a cooking timer. Return ONLY valid JSON, no markdown.
+
+Return this exact JSON structure:
+{
+  "title": "Recipe Name",
+  "totalMinutes": 30,
+  "steps": [
+    {"time": 0, "title": "Step name", "detail": "What to do", "duration": 300},
+    {"time": 300, "title": "Next step", "detail": "Instructions", "duration": 180}
+  ]
+}
+
+Rules:
+- time = seconds from start when step begins
+- duration = how long this step takes in seconds
+- Each step's time should equal previous step's time + duration
+- Include prep, cooking, and any resting time
+- Be realistic about timing
+- Keep details concise but helpful`
+            }
+          ];
+        } else {
+          parts = [{
+            text: `Create a cooking timer for this recipe. Return ONLY valid JSON, no markdown.
 
 Recipe: ${recipeInput}
 
@@ -393,8 +747,16 @@ Rules:
 - Include prep, cooking, and any resting time
 - Be realistic about timing
 - Keep details concise but helpful`
-                }]
-              }],
+          }];
+        }
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
               generationConfig: {
                 temperature: 0.7,
                 maxOutputTokens: 2048
@@ -421,10 +783,9 @@ Rules:
         steps = recipe.steps;
         recipeTitle = recipe.title;
 
-        // Cache the recipe
+        // Cache and start
         cacheRecipe(recipe);
         saveActiveRecipe();
-
         startCooking();
 
       } catch (err) {
@@ -437,10 +798,9 @@ Rules:
 
     function cacheRecipe(recipe) {
       let cached = JSON.parse(storage.get('cachedRecipes') || '[]');
-      // Remove duplicate titles
       cached = cached.filter(r => r.title !== recipe.title);
       cached.unshift(recipe);
-      cached = cached.slice(0, 10); // Keep last 10
+      cached = cached.slice(0, 10);
       storage.set('cachedRecipes', JSON.stringify(cached));
     }
 
@@ -448,6 +808,7 @@ Rules:
       storage.set('activeRecipe', JSON.stringify({ title: recipeTitle, steps }));
     }
 
+    // ==================== TIMER ====================
     function startCooking() {
       const saved = storage.get('timerStartTime');
       const savedPaused = storage.get('timerPausedTime');
@@ -466,6 +827,7 @@ Rules:
 
       document.getElementById('loading-section').style.display = 'none';
       document.getElementById('setup-section').style.display = 'none';
+      document.getElementById('unlock-section').style.display = 'none';
       document.getElementById('timer-section').style.display = 'block';
       document.getElementById('controls').style.display = 'flex';
 
@@ -574,7 +936,6 @@ Rules:
         ${remaining > 0 ? `<div class="duration">${formatTime(Math.max(0, remaining))} remaining</div>` : ''}
       `;
 
-      // Upcoming
       const upcomingEl = document.getElementById('upcoming-steps');
       const upcoming = steps.slice(currentIndex + 1, currentIndex + 4);
       upcomingEl.innerHTML = upcoming.map(step => {
@@ -590,7 +951,6 @@ Rules:
         `;
       }).join('');
 
-      // Timeline
       document.querySelectorAll('.timeline-step').forEach((el, i) => {
         el.classList.remove('completed', 'active');
         if (i < currentIndex) el.classList.add('completed');
