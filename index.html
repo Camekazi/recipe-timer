@@ -120,7 +120,7 @@
     }
 
     /* Setup Section */
-    #setup-section, #unlock-section {
+    #setup-section {
       max-width: 500px;
       margin: 0 auto;
     }
@@ -183,41 +183,6 @@
 
     .input-group small a:hover {
       text-decoration: underline;
-    }
-
-    /* Password field with toggle */
-    .password-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .password-wrapper input {
-      padding-right: 50px;
-    }
-
-    .password-toggle {
-      position: absolute;
-      right: 14px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 8px;
-      color: var(--text-muted);
-      font-size: 1.1em;
-      transition: color 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .password-toggle:hover {
-      color: var(--azulejo-blue);
-    }
-
-    .password-toggle:focus {
-      outline: none;
-      color: var(--azulejo-blue);
     }
 
     /* Resume Modal */
@@ -905,8 +870,6 @@
       color: var(--azulejo-blue);
     }
 
-    #unlock-section { display: none; }
-
     /* Responsive adjustments */
     @media (max-width: 480px) {
       h1 { font-size: 1.8em; }
@@ -934,89 +897,19 @@
     </div>
   </div>
 
-  <!-- Family Login Section (for shared encrypted keys) -->
-  <div id="unlock-section">
-    <div class="card">
-      <div class="info-box" style="margin-bottom: 20px;">
-        🍳 Enter the family password to start cooking!
-      </div>
-      <div class="input-group">
-        <label>Family Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="unlock-passphrase" placeholder="Enter family password" onkeypress="if(event.key==='Enter')unlockKey()">
-          <button type="button" class="password-toggle" onclick="togglePassword('unlock-passphrase', this)" aria-label="Show password">👁</button>
-        </div>
-      </div>
-      <button class="btn-primary" onclick="unlockKey()">Start Cooking</button>
-      <div class="key-actions">
-        <button onclick="showChangeKey()">🔧 Owner Settings</button>
-      </div>
-      <div id="unlock-error" class="error-msg"></div>
-    </div>
-  </div>
-
-  <!-- Owner Settings Section (change API key) -->
-  <div id="owner-section" style="display: none;">
-    <div class="card">
-      <div class="info-box" style="margin-bottom: 20px;">
-        🔐 Owner Settings — Change the API key or family password
-      </div>
-      <div class="input-group">
-        <label>Current Family Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="owner-current-password" placeholder="Verify you're the owner">
-          <button type="button" class="password-toggle" onclick="togglePassword('owner-current-password', this)" aria-label="Show password">👁</button>
-        </div>
-      </div>
-      <div class="input-group">
-        <label>New Gemini API Key (optional)</label>
-        <div class="password-wrapper">
-          <input type="password" id="owner-new-key" placeholder="Leave blank to keep current key">
-          <button type="button" class="password-toggle" onclick="togglePassword('owner-new-key', this)" aria-label="Show password">👁</button>
-        </div>
-        <small>Only change if you need a new API key</small>
-      </div>
-      <div class="input-group">
-        <label>New Family Password (optional)</label>
-        <div class="password-wrapper">
-          <input type="password" id="owner-new-password" placeholder="Leave blank to keep current password">
-          <button type="button" class="password-toggle" onclick="togglePassword('owner-new-password', this)" aria-label="Show password">👁</button>
-        </div>
-      </div>
-      <button class="btn-primary" onclick="saveOwnerSettings()">Save Changes</button>
-      <div class="key-actions">
-        <button onclick="hideOwnerSettings()">← Back</button>
-        <button onclick="forgetKey()" style="color: var(--terracotta);">Reset Everything</button>
-      </div>
-      <div id="owner-error" class="error-msg"></div>
-    </div>
-  </div>
-
   <!-- Setup Section -->
   <div id="setup-section">
     <div class="card">
-      <div class="input-group">
+      <div class="input-group" id="api-key-group">
         <label>Gemini API Key</label>
-        <div class="password-wrapper">
-          <input type="password" id="api-key" placeholder="Enter your Gemini API key">
-          <button type="button" class="password-toggle" onclick="togglePassword('api-key', this)" aria-label="Show password">👁</button>
-        </div>
+        <input type="text" id="api-key" placeholder="Paste your Gemini API key">
         <small>
-          Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> (250/day free)
+          Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> (250 requests/day free)
         </small>
       </div>
 
-      <div class="input-group">
-        <label>Family Password</label>
-        <div class="password-wrapper">
-          <input type="password" id="passphrase" placeholder="Create a password for your family" required>
-          <button type="button" class="password-toggle" onclick="togglePassword('passphrase', this)" aria-label="Show password">👁</button>
-        </div>
-        <small>Share this password with family members so they can use the timer</small>
-      </div>
-
       <div class="info-box">
-        🔐 Your API key is encrypted with AES-256. Family members only need the password — they'll never see your API key.
+        💡 Your API key is stored in this browser's localStorage. Each person should use their own key on their own device.
       </div>
 
       <!-- Input Mode Tabs -->
@@ -1118,107 +1011,31 @@
     let intervalId = null;
     let currentInputMode = 'text';
     let selectedPhoto = null;
-    let decryptedApiKey = null;
     let pendingResumeData = null;
-
-    // ==================== ENCRYPTION ====================
-    async function deriveKey(passphrase, salt) {
-      const enc = new TextEncoder();
-      const keyMaterial = await crypto.subtle.importKey(
-        'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
-      );
-      return crypto.subtle.deriveKey(
-        { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
-        keyMaterial,
-        { name: 'AES-GCM', length: 256 },
-        false,
-        ['encrypt', 'decrypt']
-      );
-    }
-
-    async function encryptApiKey(apiKey, passphrase) {
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const key = await deriveKey(passphrase, salt);
-      const encrypted = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv },
-        key,
-        new TextEncoder().encode(apiKey)
-      );
-      return {
-        salt: Array.from(salt),
-        iv: Array.from(iv),
-        ciphertext: Array.from(new Uint8Array(encrypted))
-      };
-    }
-
-    async function decryptApiKey(stored, passphrase) {
-      const salt = new Uint8Array(stored.salt);
-      const iv = new Uint8Array(stored.iv);
-      const ciphertext = new Uint8Array(stored.ciphertext);
-      const key = await deriveKey(passphrase, salt);
-      const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv },
-        key,
-        ciphertext
-      );
-      return new TextDecoder().decode(decrypted);
-    }
 
     // ==================== INIT ====================
     window.onload = function() {
-      // Check for family key (encrypted)
-      const encryptedKey = storage.get('geminiKeyEncrypted');
+      // Check for saved API key (plain localStorage - Simon Willison style)
+      const savedKey = storage.get('geminiApiKey');
 
-      if (encryptedKey) {
-        // Family password already set - show unlock screen
-        document.getElementById('setup-section').style.display = 'none';
-        document.getElementById('unlock-section').style.display = 'block';
-      } else {
-        // First-time setup - show setup screen
-        document.getElementById('setup-section').style.display = 'block';
-        document.getElementById('unlock-section').style.display = 'none';
+      if (savedKey) {
+        document.getElementById('api-key').value = savedKey;
       }
 
-      loadCachedRecipes();
-    };
-
-    async function unlockKey() {
-      const passphrase = document.getElementById('unlock-passphrase').value;
-      const errorEl = document.getElementById('unlock-error');
-
-      if (!passphrase) {
-        errorEl.textContent = 'Please enter the family password';
+      // Check for active recipe (in-progress cooking)
+      const activeRecipe = storage.get('activeRecipe');
+      if (activeRecipe) {
+        const data = JSON.parse(activeRecipe);
+        pendingResumeData = data;
+        document.getElementById('resume-recipe-name').textContent = `"${data.title}"`;
+        document.getElementById('setup-section').style.display = 'none';
+        document.getElementById('resume-modal').style.display = 'flex';
         return;
       }
 
-      try {
-        const stored = JSON.parse(storage.get('geminiKeyEncrypted'));
-        decryptedApiKey = await decryptApiKey(stored, passphrase);
-
-        // Check for active recipe first
-        const activeRecipe = storage.get('activeRecipe');
-        if (activeRecipe) {
-          const data = JSON.parse(activeRecipe);
-          // Store pending resume data and show modal
-          pendingResumeData = data;
-          document.getElementById('resume-recipe-name').textContent = `"${data.title}"`;
-          document.getElementById('unlock-section').style.display = 'none';
-          document.getElementById('resume-modal').style.display = 'flex';
-          return;
-        }
-
-        // Show recipe input screen (key already unlocked, hidden from family)
-        document.getElementById('unlock-section').style.display = 'none';
-        document.getElementById('setup-section').style.display = 'block';
-        document.getElementById('api-key').closest('.input-group').style.display = 'none';
-        document.getElementById('passphrase').closest('.input-group').style.display = 'none';
-        document.querySelector('#setup-section .info-box').style.display = 'none';
-
-      } catch (e) {
-        errorEl.textContent = 'Wrong password. Try again.';
-      }
-    }
+      document.getElementById('setup-section').style.display = 'block';
+      loadCachedRecipes();
+    };
 
     function resumeRecipe() {
       if (pendingResumeData) {
@@ -1236,118 +1053,14 @@
       storage.remove('timerPausedTime');
       pendingResumeData = null;
       document.getElementById('resume-modal').style.display = 'none';
-
-      // Show recipe input screen
       document.getElementById('setup-section').style.display = 'block';
-      document.getElementById('api-key').closest('.input-group').style.display = 'none';
-      document.getElementById('passphrase').closest('.input-group').style.display = 'none';
-      document.querySelector('#setup-section .info-box').style.display = 'none';
+      loadCachedRecipes();
     }
 
     function forgetKey() {
-      if (confirm('Remove saved API key and family password? You\'ll need to set up again.')) {
-        storage.remove('geminiKeyEncrypted');
+      if (confirm('Remove saved API key? You\'ll need to enter it again.')) {
         storage.remove('geminiApiKey');
-        decryptedApiKey = null;
-        document.getElementById('unlock-section').style.display = 'none';
-        document.getElementById('owner-section').style.display = 'none';
-        document.getElementById('setup-section').style.display = 'block';
         document.getElementById('api-key').value = '';
-        document.getElementById('api-key').disabled = false;
-        document.getElementById('passphrase').value = '';
-      }
-    }
-
-    // Toggle password visibility
-    function togglePassword(inputId, button) {
-      const input = document.getElementById(inputId);
-      if (input.type === 'password') {
-        input.type = 'text';
-        button.textContent = '🙈';
-        button.setAttribute('aria-label', 'Hide password');
-      } else {
-        input.type = 'password';
-        button.textContent = '👁';
-        button.setAttribute('aria-label', 'Show password');
-      }
-    }
-
-    function showChangeKey() {
-      document.getElementById('unlock-section').style.display = 'none';
-      document.getElementById('owner-section').style.display = 'block';
-      document.getElementById('owner-error').textContent = '';
-    }
-
-    function hideOwnerSettings() {
-      document.getElementById('owner-section').style.display = 'none';
-      document.getElementById('unlock-section').style.display = 'block';
-      // Clear the form
-      document.getElementById('owner-current-password').value = '';
-      document.getElementById('owner-new-key').value = '';
-      document.getElementById('owner-new-password').value = '';
-    }
-
-    async function saveOwnerSettings() {
-      const currentPassword = document.getElementById('owner-current-password').value;
-      const newKey = document.getElementById('owner-new-key').value.trim();
-      const newPassword = document.getElementById('owner-new-password').value;
-      const errorEl = document.getElementById('owner-error');
-
-      if (!currentPassword) {
-        errorEl.textContent = 'Please enter the current family password';
-        return;
-      }
-
-      try {
-        // Verify current password by decrypting
-        const stored = JSON.parse(storage.get('geminiKeyEncrypted'));
-        const currentKey = await decryptApiKey(stored, currentPassword);
-
-        // Determine what to save
-        const keyToSave = newKey || currentKey;
-        const passwordToUse = newPassword || currentPassword;
-
-        // Build confirmation message
-        let confirmMsg = 'Confirm changes:\n';
-        if (newKey) confirmMsg += '• API key will be updated\n';
-        if (newPassword) confirmMsg += '• Family password will be changed\n';
-        if (!newKey && !newPassword) {
-          errorEl.textContent = 'No changes to save';
-          return;
-        }
-        confirmMsg += '\nProceed?';
-
-        if (!confirm(confirmMsg)) {
-          return;
-        }
-
-        // Re-encrypt with (possibly new) password
-        const encrypted = await encryptApiKey(keyToSave, passwordToUse);
-
-        // VALIDATION: Test that we can decrypt with the new password before saving
-        try {
-          const testDecrypt = await decryptApiKey(encrypted, passwordToUse);
-          if (testDecrypt !== keyToSave) {
-            throw new Error('Validation failed');
-          }
-        } catch (validationError) {
-          errorEl.textContent = '⚠️ Validation failed. Please try again.';
-          return;
-        }
-
-        // Validation passed - save it
-        storage.set('geminiKeyEncrypted', JSON.stringify(encrypted));
-
-        // Success
-        errorEl.style.color = 'var(--success-green)';
-        errorEl.textContent = '✓ Settings saved and validated!';
-        setTimeout(() => {
-          hideOwnerSettings();
-          errorEl.style.color = '';
-        }, 1500);
-
-      } catch (e) {
-        errorEl.textContent = 'Wrong password. Please try again.';
       }
     }
 
@@ -1445,17 +1158,12 @@
     }
 
     async function generateTimer() {
-      const apiKeyInput = document.getElementById('api-key').value.trim();
-      const passphrase = document.getElementById('passphrase').value;
+      const apiKey = document.getElementById('api-key').value.trim();
       const recipeInput = document.getElementById('recipe-input').value.trim();
       const errorEl = document.getElementById('error-msg');
 
-      // Get API key (either decrypted or from input)
-      let apiKey = decryptedApiKey || apiKeyInput;
-
-      if (!apiKey) { errorEl.textContent = 'Please enter your API key'; return; }
-      if (!passphrase && !decryptedApiKey) {
-        errorEl.textContent = 'Please create a family password';
+      if (!apiKey) {
+        errorEl.textContent = 'Please enter your API key';
         return;
       }
       if (currentInputMode === 'text' && !recipeInput) {
@@ -1469,13 +1177,8 @@
 
       errorEl.textContent = '';
 
-      // Save API key (always encrypted with family password)
-      if (!decryptedApiKey) {
-        const encrypted = await encryptApiKey(apiKey, passphrase);
-        storage.set('geminiKeyEncrypted', JSON.stringify(encrypted));
-        storage.remove('geminiApiKey');
-        decryptedApiKey = apiKey;
-      }
+      // Save API key to localStorage (plain, like Simon Willison's tools)
+      storage.set('geminiApiKey', apiKey);
 
       // Show loading
       document.getElementById('setup-section').style.display = 'none';
@@ -1632,7 +1335,6 @@ Rules:
 
       document.getElementById('loading-section').style.display = 'none';
       document.getElementById('setup-section').style.display = 'none';
-      document.getElementById('unlock-section').style.display = 'none';
       document.getElementById('timer-section').style.display = 'block';
       document.getElementById('controls').style.display = 'flex';
 
@@ -1695,18 +1397,10 @@ Rules:
       document.getElementById('done-section').style.display = 'none';
       document.getElementById('controls').style.display = 'none';
       document.querySelector('h1').textContent = 'Recipe Timer';
-
-      // If we have a decrypted key, go to recipe input (not unlock)
-      if (decryptedApiKey) {
-        document.getElementById('setup-section').style.display = 'block';
-        document.getElementById('api-key').closest('.input-group').style.display = 'none';
-        document.getElementById('passphrase').closest('.input-group').style.display = 'none';
-        document.querySelector('#setup-section .info-box').style.display = 'none';
-        document.getElementById('recipe-input').value = '';
-        removePhoto();
-      } else {
-        location.reload();
-      }
+      document.getElementById('setup-section').style.display = 'block';
+      document.getElementById('recipe-input').value = '';
+      removePhoto();
+      loadCachedRecipes();
     }
 
     function formatTime(seconds) {
