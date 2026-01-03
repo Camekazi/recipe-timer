@@ -1267,7 +1267,7 @@ Rules:
               contents: [{ parts }],
               generationConfig: {
                 temperature: 0.7,
-                maxOutputTokens: 2048
+                maxOutputTokens: 4096
               }
             })
           }
@@ -1281,7 +1281,7 @@ Rules:
         const data = await response.json();
         const text = data.candidates[0].content.parts[0].text;
 
-        // Parse JSON (handle markdown code blocks and trailing content)
+        // Parse JSON (handle markdown code blocks, trailing content, and truncation)
         let jsonStr = text;
 
         // Strip markdown code blocks
@@ -1289,28 +1289,45 @@ Rules:
           jsonStr = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
         }
 
-        // Extract JSON object (find first { and its matching })
+        // Find JSON start
         const startIdx = jsonStr.indexOf('{');
         if (startIdx === -1) {
           throw new Error('No JSON object found in response');
         }
+        jsonStr = jsonStr.slice(startIdx);
 
-        let braceCount = 0;
-        let endIdx = startIdx;
-        for (let i = startIdx; i < jsonStr.length; i++) {
-          if (jsonStr[i] === '{') braceCount++;
-          if (jsonStr[i] === '}') braceCount--;
-          if (braceCount === 0) {
-            endIdx = i;
-            break;
+        // Repair truncated JSON (common with LLM responses)
+        function repairJson(str) {
+          // Remove trailing incomplete strings (cut off mid-string)
+          str = str.replace(/,\s*"[^"]*$/, '');  // Remove trailing incomplete key
+          str = str.replace(/:\s*"[^"]*$/, ': ""');  // Complete incomplete string value
+
+          // Count brackets and braces
+          let braces = 0, brackets = 0;
+          let inString = false;
+          let escaped = false;
+
+          for (let i = 0; i < str.length; i++) {
+            const char = str[i];
+            if (escaped) { escaped = false; continue; }
+            if (char === '\\') { escaped = true; continue; }
+            if (char === '"') { inString = !inString; continue; }
+            if (inString) continue;
+
+            if (char === '{') braces++;
+            if (char === '}') braces--;
+            if (char === '[') brackets++;
+            if (char === ']') brackets--;
           }
+
+          // Close any open brackets/braces
+          while (brackets > 0) { str += ']'; brackets--; }
+          while (braces > 0) { str += '}'; braces--; }
+
+          return str;
         }
 
-        if (braceCount !== 0) {
-          throw new Error('Malformed JSON: unmatched braces');
-        }
-
-        jsonStr = jsonStr.slice(startIdx, endIdx + 1);
+        jsonStr = repairJson(jsonStr);
         const recipe = JSON.parse(jsonStr);
         steps = recipe.steps;
         recipeTitle = recipe.title;
