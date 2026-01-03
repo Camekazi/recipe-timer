@@ -3,13 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>🐟 Cod Fajitas Timer</title>
+  <title>Recipe Timer Generator</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -20,45 +16,85 @@
       padding-bottom: 100px;
     }
 
-    h1 {
-      text-align: center;
-      font-size: 1.8em;
-      margin-bottom: 10px;
-      color: #ff6b35;
-    }
+    h1 { text-align: center; font-size: 1.8em; margin-bottom: 10px; color: #ff6b35; }
+    .subtitle { text-align: center; color: #888; margin-bottom: 30px; font-size: 0.9em; }
 
-    .subtitle {
-      text-align: center;
-      color: #888;
-      margin-bottom: 30px;
+    /* Setup Section */
+    #setup-section { max-width: 500px; margin: 0 auto; }
+
+    .input-group { margin-bottom: 20px; }
+    .input-group label { display: block; margin-bottom: 8px; color: #ff6b35; font-weight: 600; }
+    .input-group input, .input-group textarea {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #333;
+      border-radius: 12px;
+      background: #252545;
+      color: #eee;
+      font-size: 1em;
+    }
+    .input-group textarea { min-height: 120px; resize: vertical; }
+    .input-group input:focus, .input-group textarea:focus {
+      outline: none;
+      border-color: #ff6b35;
+    }
+    .input-group small { display: block; margin-top: 8px; color: #888; font-size: 0.85em; }
+    .input-group small a { color: #ff6b35; }
+
+    .warning-box {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid #fbbf24;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 20px;
       font-size: 0.9em;
+      color: #fbbf24;
     }
 
-    #start-section {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    #start-btn {
+    #generate-btn {
+      width: 100%;
       background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
       color: white;
       border: none;
-      padding: 20px 50px;
-      font-size: 1.4em;
-      border-radius: 50px;
+      padding: 18px;
+      font-size: 1.2em;
+      border-radius: 12px;
       cursor: pointer;
       box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
     }
+    #generate-btn:hover { transform: scale(1.02); }
+    #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    #start-btn:hover {
-      transform: scale(1.05);
-      box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+    .cached-recipes { margin-top: 30px; }
+    .cached-recipes h3 { color: #888; font-size: 0.9em; margin-bottom: 10px; }
+    .cached-item {
+      background: #252545;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+    .cached-item:hover { background: #2d2d5a; }
+    .cached-item .title { font-weight: 600; }
+    .cached-item .meta { color: #888; font-size: 0.85em; }
 
-    #active-section {
-      display: none;
+    /* Loading */
+    #loading-section { display: none; text-align: center; padding: 60px 20px; }
+    .spinner {
+      width: 50px; height: 50px;
+      border: 4px solid #333;
+      border-top-color: #ff6b35;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Timer Section (reused from cod-fajitas) */
+    #timer-section { display: none; }
 
     .elapsed-time {
       text-align: center;
@@ -87,27 +123,9 @@
       margin-bottom: 30px;
       box-shadow: 0 0 20px rgba(74, 222, 128, 0.2);
     }
-
-    .current-step h2 {
-      font-size: 1.4em;
-      margin-bottom: 10px;
-      color: #4ade80;
-    }
-
-    .current-step p {
-      color: #ccc;
-      line-height: 1.6;
-    }
-
-    .current-step .duration {
-      margin-top: 15px;
-      font-size: 1.1em;
-      color: #4ade80;
-    }
-
-    .upcoming-section {
-      margin-bottom: 30px;
-    }
+    .current-step h2 { font-size: 1.4em; margin-bottom: 10px; color: #4ade80; }
+    .current-step p { color: #ccc; line-height: 1.6; }
+    .current-step .duration { margin-top: 15px; font-size: 1.1em; color: #4ade80; }
 
     .upcoming-step {
       background: #252545;
@@ -119,27 +137,10 @@
       align-items: center;
       border-left: 4px solid #ff6b35;
     }
-
-    .upcoming-step.soon {
-      border-left-color: #fbbf24;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-
-    .upcoming-step .title {
-      font-weight: 600;
-      margin-bottom: 3px;
-    }
-
-    .upcoming-step .detail {
-      font-size: 0.85em;
-      color: #888;
-    }
-
+    .upcoming-step.soon { border-left-color: #fbbf24; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .upcoming-step .title { font-weight: 600; margin-bottom: 3px; }
+    .upcoming-step .detail { font-size: 0.85em; color: #888; }
     .upcoming-step .countdown {
       font-size: 1.2em;
       font-weight: bold;
@@ -149,99 +150,26 @@
       text-align: right;
     }
 
-    .timeline-section {
-      margin-top: 40px;
-    }
-
     .timeline-step {
       display: flex;
       padding: 12px 0;
       border-bottom: 1px solid #333;
-      align-items: flex-start;
     }
-
-    .timeline-step.completed {
-      opacity: 0.5;
-    }
-
-    .timeline-step.completed .timeline-title {
-      text-decoration: line-through;
-    }
-
+    .timeline-step.completed { opacity: 0.5; }
+    .timeline-step.completed .timeline-title { text-decoration: line-through; }
     .timeline-step.active {
       background: rgba(74, 222, 128, 0.1);
       margin: 0 -20px;
       padding: 12px 20px;
       border-radius: 8px;
     }
+    .timeline-time { min-width: 70px; font-size: 0.85em; color: #888; }
+    .timeline-content { flex: 1; }
+    .timeline-title { font-weight: 600; margin-bottom: 3px; }
+    .timeline-detail { font-size: 0.85em; color: #888; }
 
-    .timeline-time {
-      min-width: 70px;
-      font-size: 0.85em;
-      color: #888;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .timeline-content {
-      flex: 1;
-    }
-
-    .timeline-title {
-      font-weight: 600;
-      margin-bottom: 3px;
-    }
-
-    .timeline-detail {
-      font-size: 0.85em;
-      color: #888;
-    }
-
-    .done-section {
-      display: none;
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .done-section h2 {
-      font-size: 2em;
-      margin-bottom: 20px;
-    }
-
-    .done-section p {
-      color: #888;
-      font-size: 1.1em;
-    }
-
-    .controls {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #1a1a2e;
-      padding: 15px 20px;
-      display: flex;
-      gap: 10px;
-      border-top: 1px solid #333;
-    }
-
-    .controls button {
-      flex: 1;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 1em;
-      cursor: pointer;
-    }
-
-    #pause-btn {
-      background: #fbbf24;
-      color: #000;
-    }
-
-    #reset-btn {
-      background: #ef4444;
-      color: white;
-    }
+    .done-section { display: none; text-align: center; padding: 60px 20px; }
+    .done-section h2 { font-size: 2em; margin-bottom: 20px; }
 
     .paused-banner {
       display: none;
@@ -254,200 +182,294 @@
       border-radius: 8px;
     }
 
-    .ingredient-checklist {
-      background: #252545;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 30px;
+    .controls {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1a1a2e;
+      padding: 15px 20px;
+      display: none;
+      gap: 10px;
+      border-top: 1px solid #333;
     }
+    .controls button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+    #pause-btn { background: #fbbf24; color: #000; }
+    #reset-btn { background: #ef4444; color: white; }
+    #new-btn { background: #6366f1; color: white; }
 
-    .ingredient-checklist h3 {
-      margin-bottom: 15px;
-      color: #ff6b35;
-    }
-
-    .ingredient-checklist ul {
-      list-style: none;
-      columns: 2;
-      gap: 20px;
-    }
-
-    .ingredient-checklist li {
-      padding: 5px 0;
-      font-size: 0.9em;
-    }
+    .error-msg { color: #ef4444; text-align: center; margin-top: 20px; }
   </style>
 </head>
 <body>
-  <h1>🐟 Cod Fajitas</h1>
-  <p class="subtitle">~30 minutes • Serves 2-3</p>
+  <h1>Recipe Timer</h1>
+  <p class="subtitle">AI-powered cooking timers</p>
 
-  <div id="start-section">
-    <div class="ingredient-checklist">
-      <h3>📝 Ingredients Check</h3>
-      <ul>
-        <li>🐟 400g cod fillets</li>
-        <li>🌶️ 2 bell peppers</li>
-        <li>🧅 1 large onion</li>
-        <li>🧄 2 cloves garlic</li>
-        <li>🌮 Tortillas (6-8)</li>
-        <li>🍋 1 lime</li>
-        <li>🥑 Avocado/guac</li>
-        <li>🫙 Sour cream</li>
-        <li>🧀 Cheese (optional)</li>
-        <li>🫒 Olive oil</li>
-        <li>🌿 Fresh coriander</li>
-        <li>🧂 Fajita seasoning</li>
-      </ul>
+  <!-- Setup Section -->
+  <div id="setup-section">
+    <div class="input-group">
+      <label>Gemini API Key</label>
+      <input type="password" id="api-key" placeholder="Enter your Gemini API key">
+      <small>
+        Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> (250 requests/day free)
+      </small>
     </div>
-    <button id="start-btn" onclick="startCooking()">🔥 Start Cooking</button>
+
+    <div class="warning-box">
+      Your API key is stored in your browser's localStorage. It's visible in DevTools. Only use keys with quota limits.
+    </div>
+
+    <div class="input-group">
+      <label>What are you cooking?</label>
+      <textarea id="recipe-input" placeholder="e.g., Chicken stir fry with vegetables&#10;&#10;Or paste a full recipe with ingredients and steps..."></textarea>
+    </div>
+
+    <button id="generate-btn" onclick="generateTimer()">Generate Timer</button>
+    <div id="error-msg" class="error-msg"></div>
+
+    <div id="cached-section" class="cached-recipes" style="display: none;">
+      <h3>Recent Recipes</h3>
+      <div id="cached-list"></div>
+    </div>
   </div>
 
-  <div id="active-section">
-    <div class="paused-banner" id="paused-banner">⏸️ PAUSED</div>
+  <!-- Loading Section -->
+  <div id="loading-section">
+    <div class="spinner"></div>
+    <p>Generating your cooking timer...</p>
+  </div>
+
+  <!-- Timer Section -->
+  <div id="timer-section">
+    <div class="paused-banner" id="paused-banner">PAUSED</div>
     <div class="elapsed-time" id="elapsed-time">00:00</div>
 
-    <div class="section-title">🍳 Do This Now</div>
+    <div class="section-title">Do This Now</div>
     <div class="current-step" id="current-step">
       <h2>Loading...</h2>
       <p></p>
     </div>
 
     <div class="upcoming-section">
-      <div class="section-title">⏰ Coming Up Next</div>
+      <div class="section-title">Coming Up Next</div>
       <div id="upcoming-steps"></div>
     </div>
 
-    <div class="timeline-section">
-      <div class="section-title">📋 Full Timeline</div>
+    <div class="timeline-section" style="margin-top: 40px;">
+      <div class="section-title">Full Timeline</div>
       <div id="timeline"></div>
     </div>
   </div>
 
+  <!-- Done Section -->
   <div class="done-section" id="done-section">
-    <h2>🎉 Buen Provecho!</h2>
-    <p>Your cod fajitas are ready to serve!</p>
-    <p style="margin-top: 20px;">🌮 Load up those tortillas and enjoy!</p>
+    <h2>All Done!</h2>
+    <p id="done-message">Your meal is ready to serve!</p>
   </div>
 
-  <div class="controls" id="controls" style="display: none;">
-    <button id="pause-btn" onclick="togglePause()">⏸️ Pause</button>
-    <button id="reset-btn" onclick="resetTimer()">🔄 Reset</button>
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <button id="pause-btn" onclick="togglePause()">Pause</button>
+    <button id="reset-btn" onclick="resetTimer()">Reset</button>
+    <button id="new-btn" onclick="newRecipe()">New Recipe</button>
   </div>
 
   <script>
-    // Safe localStorage wrapper (file:// URLs block localStorage on iOS Safari)
+    // Safe localStorage wrapper (iOS Safari blocks on file:// URLs)
     const storage = {
-      get: function(key) {
-        try { return localStorage.getItem(key); } catch(e) { return null; }
-      },
-      set: function(key, value) {
-        try { localStorage.setItem(key, value); } catch(e) {}
-      },
-      remove: function(key) {
-        try { localStorage.removeItem(key); } catch(e) {}
-      }
+      get: (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } },
+      set: (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} },
+      remove: (key) => { try { localStorage.removeItem(key); } catch(e) {} }
     };
 
-    const steps = [
-      {
-        time: 0,
-        title: "🔪 Prep the Vegetables",
-        detail: "Slice bell peppers into strips 🌶️ Slice onion into half-moons 🧅 Mince garlic 🧄 Chop coriander 🌿",
-        duration: 300
-      },
-      {
-        time: 300,
-        title: "🐟 Prep the Cod",
-        detail: "Pat cod fillets dry with paper towels. Cut into 2-inch chunks. Season generously with fajita seasoning 🌶️ salt 🧂 and a squeeze of lime 🍋",
-        duration: 180
-      },
-      {
-        time: 480,
-        title: "🔥 Heat the Pan",
-        detail: "Add 2 tbsp olive oil 🫒 to a large skillet or cast iron pan. Heat over medium-high until shimmering ✨",
-        duration: 120
-      },
-      {
-        time: 600,
-        title: "🍳 Cook the Peppers & Onions",
-        detail: "Add peppers and onions to the hot pan 🔥 Cook for 5-6 minutes, stirring occasionally, until slightly charred and softened 👨‍🍳",
-        duration: 360
-      },
-      {
-        time: 960,
-        title: "🧄 Add Garlic",
-        detail: "Push veggies to the side. Add minced garlic to the cleared space. Cook for 30 seconds until fragrant 👃✨",
-        duration: 30
-      },
-      {
-        time: 990,
-        title: "📤 Remove Veggies",
-        detail: "Transfer peppers, onions, and garlic to a plate 🍽️ Keep warm! 🔥",
-        duration: 30
-      },
-      {
-        time: 1020,
-        title: "🐟 Cook the Cod",
-        detail: "Add another splash of oil to the pan 🫒 Add cod chunks in a single layer. Don't move them! 🛑 Let them cook undisturbed for 3 minutes ⏱️",
-        duration: 180
-      },
-      {
-        time: 1200,
-        title: "🔄 Flip the Cod",
-        detail: "Gently flip each piece 🐟➡️🐟 Cook for another 2-3 minutes until fish is opaque and flakes easily ✨",
-        duration: 150
-      },
-      {
-        time: 1350,
-        title: "🤝 Combine Everything",
-        detail: "Return the peppers and onions to the pan 🍳 Gently toss everything together 🥄 Squeeze over remaining lime juice 🍋💦",
-        duration: 60
-      },
-      {
-        time: 1410,
-        title: "🌮 Warm the Tortillas",
-        detail: "Warm tortillas in microwave (30 sec wrapped in damp paper towel 💧) or dry pan (15 sec each side) 🔥",
-        duration: 90
-      },
-      {
-        time: 1500,
-        title: "🥑 Set Up Toppings",
-        detail: "Slice avocado or prep guacamole 🥑 Put out sour cream 🫙 cheese 🧀 lime wedges 🍋 and fresh coriander 🌿",
-        duration: 120
-      },
-      {
-        time: 1620,
-        title: "🎉 Serve!",
-        detail: "Transfer fajita mix to a serving dish 🍽️ Scatter with fresh coriander 🌿 Serve with warm tortillas and all the toppings! 🌮🎊",
-        duration: 60
-      }
-    ];
-
+    let steps = [];
+    let recipeTitle = '';
     let startTime = null;
     let pausedTime = null;
     let isPaused = false;
     let intervalId = null;
 
+    // Load saved API key
+    window.onload = function() {
+      const savedKey = storage.get('geminiApiKey');
+      if (savedKey) document.getElementById('api-key').value = savedKey;
+
+      loadCachedRecipes();
+
+      // Check for active timer session
+      const activeRecipe = storage.get('activeRecipe');
+      if (activeRecipe) {
+        const data = JSON.parse(activeRecipe);
+        if (confirm(`Resume "${data.title}"?`)) {
+          steps = data.steps;
+          recipeTitle = data.title;
+          startCooking();
+        } else {
+          storage.remove('activeRecipe');
+          storage.remove('timerStartTime');
+        }
+      }
+    };
+
+    function loadCachedRecipes() {
+      const cached = storage.get('cachedRecipes');
+      if (!cached) return;
+
+      const recipes = JSON.parse(cached);
+      if (recipes.length === 0) return;
+
+      const list = document.getElementById('cached-list');
+      list.innerHTML = recipes.slice(0, 5).map((r, i) => `
+        <div class="cached-item" onclick="loadCached(${i})">
+          <div>
+            <div class="title">${r.title}</div>
+            <div class="meta">${r.steps.length} steps</div>
+          </div>
+          <span>→</span>
+        </div>
+      `).join('');
+
+      document.getElementById('cached-section').style.display = 'block';
+    }
+
+    function loadCached(index) {
+      const cached = JSON.parse(storage.get('cachedRecipes'));
+      const recipe = cached[index];
+      steps = recipe.steps;
+      recipeTitle = recipe.title;
+      saveActiveRecipe();
+      startCooking();
+    }
+
+    async function generateTimer() {
+      const apiKey = document.getElementById('api-key').value.trim();
+      const recipeInput = document.getElementById('recipe-input').value.trim();
+      const errorEl = document.getElementById('error-msg');
+
+      if (!apiKey) { errorEl.textContent = 'Please enter your API key'; return; }
+      if (!recipeInput) { errorEl.textContent = 'Please describe what you\'re cooking'; return; }
+
+      errorEl.textContent = '';
+      storage.set('geminiApiKey', apiKey);
+
+      // Show loading
+      document.getElementById('setup-section').style.display = 'none';
+      document.getElementById('loading-section').style.display = 'block';
+
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `Create a cooking timer for this recipe. Return ONLY valid JSON, no markdown.
+
+Recipe: ${recipeInput}
+
+Return this exact JSON structure:
+{
+  "title": "Recipe Name",
+  "totalMinutes": 30,
+  "steps": [
+    {"time": 0, "title": "Step name", "detail": "What to do", "duration": 300},
+    {"time": 300, "title": "Next step", "detail": "Instructions", "duration": 180}
+  ]
+}
+
+Rules:
+- time = seconds from start when step begins
+- duration = how long this step takes in seconds
+- Each step's time should equal previous step's time + duration
+- Include prep, cooking, and any resting time
+- Be realistic about timing
+- Keep details concise but helpful`
+                }]
+              }],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048
+              }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error?.message || 'API request failed');
+        }
+
+        const data = await response.json();
+        const text = data.candidates[0].content.parts[0].text;
+
+        // Parse JSON (handle markdown code blocks)
+        let jsonStr = text;
+        if (text.includes('```')) {
+          jsonStr = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        }
+
+        const recipe = JSON.parse(jsonStr);
+        steps = recipe.steps;
+        recipeTitle = recipe.title;
+
+        // Cache the recipe
+        cacheRecipe(recipe);
+        saveActiveRecipe();
+
+        startCooking();
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('loading-section').style.display = 'none';
+        document.getElementById('setup-section').style.display = 'block';
+        errorEl.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    function cacheRecipe(recipe) {
+      let cached = JSON.parse(storage.get('cachedRecipes') || '[]');
+      // Remove duplicate titles
+      cached = cached.filter(r => r.title !== recipe.title);
+      cached.unshift(recipe);
+      cached = cached.slice(0, 10); // Keep last 10
+      storage.set('cachedRecipes', JSON.stringify(cached));
+    }
+
+    function saveActiveRecipe() {
+      storage.set('activeRecipe', JSON.stringify({ title: recipeTitle, steps }));
+    }
+
     function startCooking() {
-      const saved = storage.get('recipeTimerStartTime');
-      const savedPaused = storage.get('recipeTimerPausedTime');
+      const saved = storage.get('timerStartTime');
+      const savedPaused = storage.get('timerPausedTime');
 
       if (saved && !savedPaused) {
         startTime = parseInt(saved);
       } else if (saved && savedPaused) {
         const pauseDuration = Date.now() - parseInt(savedPaused);
         startTime = parseInt(saved) + pauseDuration;
-        storage.set('recipeTimerStartTime', startTime);
-        storage.remove('recipeTimerPausedTime');
+        storage.set('timerStartTime', startTime);
+        storage.remove('timerPausedTime');
       } else {
         startTime = Date.now();
-        storage.set('recipeTimerStartTime', startTime);
+        storage.set('timerStartTime', startTime);
       }
 
-      document.getElementById('start-section').style.display = 'none';
-      document.getElementById('active-section').style.display = 'block';
+      document.getElementById('loading-section').style.display = 'none';
+      document.getElementById('setup-section').style.display = 'none';
+      document.getElementById('timer-section').style.display = 'block';
       document.getElementById('controls').style.display = 'flex';
+
+      document.querySelector('h1').textContent = recipeTitle;
 
       renderTimeline();
       updateDisplay();
@@ -461,29 +483,46 @@
 
       if (isPaused) {
         pausedTime = Date.now();
-        storage.set('recipeTimerPausedTime', pausedTime);
-        btn.textContent = '▶️ Resume';
+        storage.set('timerPausedTime', pausedTime);
+        btn.textContent = 'Resume';
         banner.style.display = 'block';
         clearInterval(intervalId);
       } else {
         const pauseDuration = Date.now() - pausedTime;
         startTime += pauseDuration;
-        storage.set('recipeTimerStartTime', startTime);
-        storage.remove('recipeTimerPausedTime');
+        storage.set('timerStartTime', startTime);
+        storage.remove('timerPausedTime');
         pausedTime = null;
-        btn.textContent = '⏸️ Pause';
+        btn.textContent = 'Pause';
         banner.style.display = 'none';
         intervalId = setInterval(updateDisplay, 1000);
       }
     }
 
     function resetTimer() {
-      if (confirm('Reset the timer? This will start over from the beginning.')) {
-        storage.remove('recipeTimerStartTime');
-        storage.remove('recipeTimerPausedTime');
+      if (confirm('Reset the timer? This will start over.')) {
+        storage.remove('timerStartTime');
+        storage.remove('timerPausedTime');
         clearInterval(intervalId);
-        location.reload();
+        startTime = Date.now();
+        storage.set('timerStartTime', startTime);
+        isPaused = false;
+        document.getElementById('pause-btn').textContent = 'Pause';
+        document.getElementById('paused-banner').style.display = 'none';
+        document.getElementById('done-section').style.display = 'none';
+        document.getElementById('timer-section').style.display = 'block';
+        renderTimeline();
+        updateDisplay();
+        intervalId = setInterval(updateDisplay, 1000);
       }
+    }
+
+    function newRecipe() {
+      storage.remove('timerStartTime');
+      storage.remove('timerPausedTime');
+      storage.remove('activeRecipe');
+      clearInterval(intervalId);
+      location.reload();
     }
 
     function formatTime(seconds) {
@@ -493,8 +532,8 @@
     }
 
     function formatClockTime(seconds) {
-      const now = new Date(startTime + seconds * 1000);
-      return now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const d = new Date(startTime + seconds * 1000);
+      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
 
     function getElapsedSeconds() {
@@ -515,45 +554,43 @@
       document.getElementById('elapsed-time').textContent = formatTime(elapsed);
 
       if (elapsed >= totalTime) {
-        document.getElementById('active-section').style.display = 'none';
+        document.getElementById('timer-section').style.display = 'none';
         document.getElementById('done-section').style.display = 'block';
-        document.getElementById('controls').style.display = 'none';
+        document.getElementById('done-message').textContent = `${recipeTitle} is ready!`;
+        storage.remove('activeRecipe');
+        storage.remove('timerStartTime');
         clearInterval(intervalId);
         return;
       }
 
       const currentIndex = getCurrentStepIndex(elapsed);
       const current = steps[currentIndex];
-
-      const currentEl = document.getElementById('current-step');
       const timeInStep = elapsed - current.time;
       const remaining = current.duration - timeInStep;
 
-      currentEl.innerHTML = `
+      document.getElementById('current-step').innerHTML = `
         <h2>${current.title}</h2>
         <p>${current.detail}</p>
-        ${remaining > 0 ? `<div class="duration">⏱️ ${formatTime(Math.max(0, remaining))} remaining</div>` : ''}
+        ${remaining > 0 ? `<div class="duration">${formatTime(Math.max(0, remaining))} remaining</div>` : ''}
       `;
 
-      // Upcoming steps
+      // Upcoming
       const upcomingEl = document.getElementById('upcoming-steps');
       const upcoming = steps.slice(currentIndex + 1, currentIndex + 4);
-
       upcomingEl.innerHTML = upcoming.map(step => {
         const countdown = step.time - elapsed;
-        const isSoon = countdown < 120;
         return `
-          <div class="upcoming-step ${isSoon ? 'soon' : ''}">
+          <div class="upcoming-step ${countdown < 120 ? 'soon' : ''}">
             <div>
               <div class="title">${step.title}</div>
-              <div class="detail">${step.detail.substring(0, 50)}...</div>
+              <div class="detail">${step.detail.substring(0, 50)}${step.detail.length > 50 ? '...' : ''}</div>
             </div>
             <div class="countdown">${formatTime(countdown)}</div>
           </div>
         `;
       }).join('');
 
-      // Update timeline
+      // Timeline
       document.querySelectorAll('.timeline-step').forEach((el, i) => {
         el.classList.remove('completed', 'active');
         if (i < currentIndex) el.classList.add('completed');
@@ -562,8 +599,7 @@
     }
 
     function renderTimeline() {
-      const timelineEl = document.getElementById('timeline');
-      timelineEl.innerHTML = steps.map((step, i) => `
+      document.getElementById('timeline').innerHTML = steps.map((step, i) => `
         <div class="timeline-step" data-index="${i}">
           <div class="timeline-time">${formatClockTime(step.time)}</div>
           <div class="timeline-content">
@@ -573,19 +609,6 @@
         </div>
       `).join('');
     }
-
-    // Check for saved state on load
-    window.onload = function() {
-      const saved = storage.get('recipeTimerStartTime');
-      if (saved) {
-        if (confirm('Resume previous cooking session?')) {
-          startCooking();
-        } else {
-          storage.remove('recipeTimerStartTime');
-          storage.remove('recipeTimerPausedTime');
-        }
-      }
-    };
   </script>
 </body>
 </html>
