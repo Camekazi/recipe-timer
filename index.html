@@ -1281,12 +1281,36 @@ Rules:
         const data = await response.json();
         const text = data.candidates[0].content.parts[0].text;
 
-        // Parse JSON (handle markdown code blocks)
+        // Parse JSON (handle markdown code blocks and trailing content)
         let jsonStr = text;
+
+        // Strip markdown code blocks
         if (text.includes('```')) {
           jsonStr = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
         }
 
+        // Extract JSON object (find first { and its matching })
+        const startIdx = jsonStr.indexOf('{');
+        if (startIdx === -1) {
+          throw new Error('No JSON object found in response');
+        }
+
+        let braceCount = 0;
+        let endIdx = startIdx;
+        for (let i = startIdx; i < jsonStr.length; i++) {
+          if (jsonStr[i] === '{') braceCount++;
+          if (jsonStr[i] === '}') braceCount--;
+          if (braceCount === 0) {
+            endIdx = i;
+            break;
+          }
+        }
+
+        if (braceCount !== 0) {
+          throw new Error('Malformed JSON: unmatched braces');
+        }
+
+        jsonStr = jsonStr.slice(startIdx, endIdx + 1);
         const recipe = JSON.parse(jsonStr);
         steps = recipe.steps;
         recipeTitle = recipe.title;
@@ -1297,7 +1321,8 @@ Rules:
         startCooking();
 
       } catch (err) {
-        console.error(err);
+        console.error('Recipe generation error:', err);
+        console.error('Raw text was:', typeof text !== 'undefined' ? text : '(no response)');
         document.getElementById('loading-section').style.display = 'none';
         document.getElementById('setup-section').style.display = 'block';
         errorEl.textContent = `Error: ${err.message}`;
