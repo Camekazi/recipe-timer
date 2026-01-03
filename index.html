@@ -185,6 +185,41 @@
       text-decoration: underline;
     }
 
+    /* Password field with toggle */
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .password-wrapper input {
+      padding-right: 50px;
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      color: var(--text-muted);
+      font-size: 1.1em;
+      transition: color 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .password-toggle:hover {
+      color: var(--azulejo-blue);
+    }
+
+    .password-toggle:focus {
+      outline: none;
+      color: var(--azulejo-blue);
+    }
+
     /* Info box with tile pattern accent */
     .info-box {
       background: linear-gradient(135deg, rgba(30, 77, 140, 0.06) 0%, rgba(74, 124, 194, 0.04) 100%);
@@ -798,7 +833,10 @@
       </div>
       <div class="input-group">
         <label>Family Password</label>
-        <input type="password" id="unlock-passphrase" placeholder="Enter family password" onkeypress="if(event.key==='Enter')unlockKey()">
+        <div class="password-wrapper">
+          <input type="password" id="unlock-passphrase" placeholder="Enter family password" onkeypress="if(event.key==='Enter')unlockKey()">
+          <button type="button" class="password-toggle" onclick="togglePassword('unlock-passphrase', this)" aria-label="Show password">👁</button>
+        </div>
       </div>
       <button class="btn-primary" onclick="unlockKey()">Start Cooking</button>
       <div class="key-actions">
@@ -816,16 +854,25 @@
       </div>
       <div class="input-group">
         <label>Current Family Password</label>
-        <input type="password" id="owner-current-password" placeholder="Verify you're the owner">
+        <div class="password-wrapper">
+          <input type="password" id="owner-current-password" placeholder="Verify you're the owner">
+          <button type="button" class="password-toggle" onclick="togglePassword('owner-current-password', this)" aria-label="Show password">👁</button>
+        </div>
       </div>
       <div class="input-group">
         <label>New Gemini API Key (optional)</label>
-        <input type="password" id="owner-new-key" placeholder="Leave blank to keep current key">
+        <div class="password-wrapper">
+          <input type="password" id="owner-new-key" placeholder="Leave blank to keep current key">
+          <button type="button" class="password-toggle" onclick="togglePassword('owner-new-key', this)" aria-label="Show password">👁</button>
+        </div>
         <small>Only change if you need a new API key</small>
       </div>
       <div class="input-group">
         <label>New Family Password (optional)</label>
-        <input type="password" id="owner-new-password" placeholder="Leave blank to keep current password">
+        <div class="password-wrapper">
+          <input type="password" id="owner-new-password" placeholder="Leave blank to keep current password">
+          <button type="button" class="password-toggle" onclick="togglePassword('owner-new-password', this)" aria-label="Show password">👁</button>
+        </div>
       </div>
       <button class="btn-primary" onclick="saveOwnerSettings()">Save Changes</button>
       <div class="key-actions">
@@ -841,7 +888,10 @@
     <div class="card">
       <div class="input-group">
         <label>Gemini API Key</label>
-        <input type="password" id="api-key" placeholder="Enter your Gemini API key">
+        <div class="password-wrapper">
+          <input type="password" id="api-key" placeholder="Enter your Gemini API key">
+          <button type="button" class="password-toggle" onclick="togglePassword('api-key', this)" aria-label="Show password">👁</button>
+        </div>
         <small>
           Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> (250/day free)
         </small>
@@ -849,7 +899,10 @@
 
       <div class="input-group">
         <label>Family Password</label>
-        <input type="password" id="passphrase" placeholder="Create a password for your family" required>
+        <div class="password-wrapper">
+          <input type="password" id="passphrase" placeholder="Create a password for your family" required>
+          <button type="button" class="password-toggle" onclick="togglePassword('passphrase', this)" aria-label="Show password">👁</button>
+        </div>
         <small>Share this password with family members so they can use the timer</small>
       </div>
 
@@ -1075,6 +1128,20 @@
       }
     }
 
+    // Toggle password visibility
+    function togglePassword(inputId, button) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '🙈';
+        button.setAttribute('aria-label', 'Hide password');
+      } else {
+        input.type = 'password';
+        button.textContent = '👁';
+        button.setAttribute('aria-label', 'Show password');
+      }
+    }
+
     function showChangeKey() {
       document.getElementById('unlock-section').style.display = 'none';
       document.getElementById('owner-section').style.display = 'block';
@@ -1110,13 +1177,40 @@
         const keyToSave = newKey || currentKey;
         const passwordToUse = newPassword || currentPassword;
 
+        // Build confirmation message
+        let confirmMsg = 'Confirm changes:\n';
+        if (newKey) confirmMsg += '• API key will be updated\n';
+        if (newPassword) confirmMsg += '• Family password will be changed\n';
+        if (!newKey && !newPassword) {
+          errorEl.textContent = 'No changes to save';
+          return;
+        }
+        confirmMsg += '\nProceed?';
+
+        if (!confirm(confirmMsg)) {
+          return;
+        }
+
         // Re-encrypt with (possibly new) password
         const encrypted = await encryptApiKey(keyToSave, passwordToUse);
+
+        // VALIDATION: Test that we can decrypt with the new password before saving
+        try {
+          const testDecrypt = await decryptApiKey(encrypted, passwordToUse);
+          if (testDecrypt !== keyToSave) {
+            throw new Error('Validation failed');
+          }
+        } catch (validationError) {
+          errorEl.textContent = '⚠️ Validation failed. Please try again.';
+          return;
+        }
+
+        // Validation passed - save it
         storage.set('geminiKeyEncrypted', JSON.stringify(encrypted));
 
         // Success
         errorEl.style.color = 'var(--success-green)';
-        errorEl.textContent = '✓ Settings saved!';
+        errorEl.textContent = '✓ Settings saved and validated!';
         setTimeout(() => {
           hideOwnerSettings();
           errorEl.style.color = '';
@@ -1324,7 +1418,7 @@ Rules:
         }
 
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
