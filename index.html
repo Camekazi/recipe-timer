@@ -1014,12 +1014,20 @@
     let pendingResumeData = null;
 
     // ==================== INIT ====================
+    function maskApiKey(key) {
+      if (!key || key.length < 8) return '••••••••';
+      return key.slice(0, 4) + '••••••••' + key.slice(-4);
+    }
+
     window.onload = function() {
       // Check for saved API key (plain localStorage - Simon Willison style)
       const savedKey = storage.get('geminiApiKey');
 
       if (savedKey) {
-        document.getElementById('api-key').value = savedKey;
+        const input = document.getElementById('api-key');
+        input.value = maskApiKey(savedKey);
+        input.readOnly = true;
+        input.style.color = '#666';
       }
 
       // Check for active recipe (in-progress cooking)
@@ -1060,7 +1068,11 @@
     function forgetKey() {
       if (confirm('Remove saved API key? You\'ll need to enter it again.')) {
         storage.remove('geminiApiKey');
-        document.getElementById('api-key').value = '';
+        const input = document.getElementById('api-key');
+        input.value = '';
+        input.readOnly = false;
+        input.style.color = '';
+        input.placeholder = 'Paste your Gemini API key';
       }
     }
 
@@ -1158,9 +1170,17 @@
     }
 
     async function generateTimer() {
-      const apiKey = document.getElementById('api-key').value.trim();
+      const inputValue = document.getElementById('api-key').value.trim();
       const recipeInput = document.getElementById('recipe-input').value.trim();
       const errorEl = document.getElementById('error-msg');
+
+      // Use saved key from localStorage, or new key from input
+      let apiKey = storage.get('geminiApiKey');
+      const isNewKey = !apiKey && inputValue && !inputValue.includes('••••');
+
+      if (isNewKey) {
+        apiKey = inputValue;
+      }
 
       if (!apiKey) {
         errorEl.textContent = 'Please enter your API key';
@@ -1177,8 +1197,14 @@
 
       errorEl.textContent = '';
 
-      // Save API key to localStorage (plain, like Simon Willison's tools)
-      storage.set('geminiApiKey', apiKey);
+      // Save new API key to localStorage
+      if (isNewKey) {
+        storage.set('geminiApiKey', apiKey);
+        const input = document.getElementById('api-key');
+        input.value = maskApiKey(apiKey);
+        input.readOnly = true;
+        input.style.color = '#666';
+      }
 
       // Show loading
       document.getElementById('setup-section').style.display = 'none';
