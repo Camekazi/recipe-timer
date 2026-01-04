@@ -1502,10 +1502,12 @@ Rules:
           // Simple approach: replace 'value' with "value" for string values
           str = str.replace(/:\s*'([^']*)'/g, ': "$1"');
 
-          // Count brackets and braces
+          // Find where JSON properly ends (when brackets/braces return to 0)
+          // This handles BOTH trailing garbage AND truncated JSON
           let braces = 0, brackets = 0;
           let inString = false;
           let escaped = false;
+          let jsonEndIdx = -1;
 
           for (let i = 0; i < str.length; i++) {
             const char = str[i];
@@ -1518,11 +1520,35 @@ Rules:
             if (char === '}') braces--;
             if (char === '[') brackets++;
             if (char === ']') brackets--;
+
+            // Found the end of valid JSON (balanced and back to 0)
+            if (braces === 0 && brackets === 0 && i > 0) {
+              jsonEndIdx = i + 1;
+              break;
+            }
           }
 
-          // Close any open brackets/braces
-          while (brackets > 0) { str += ']'; brackets--; }
-          while (braces > 0) { str += '}'; braces--; }
+          // If we found a valid end point, truncate trailing garbage
+          if (jsonEndIdx > 0) {
+            str = str.slice(0, jsonEndIdx);
+          } else {
+            // JSON is truncated - add missing closers
+            // Re-count since we may have modified str above
+            braces = 0; brackets = 0; inString = false; escaped = false;
+            for (let i = 0; i < str.length; i++) {
+              const char = str[i];
+              if (escaped) { escaped = false; continue; }
+              if (char === '\\') { escaped = true; continue; }
+              if (char === '"') { inString = !inString; continue; }
+              if (inString) continue;
+              if (char === '{') braces++;
+              if (char === '}') braces--;
+              if (char === '[') brackets++;
+              if (char === ']') brackets--;
+            }
+            while (brackets > 0) { str += ']'; brackets--; }
+            while (braces > 0) { str += '}'; braces--; }
+          }
 
           return str;
         }
