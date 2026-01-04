@@ -1187,6 +1187,15 @@
   <!-- Setup Section -->
   <div id="setup-section">
     <div class="card">
+      <!-- Model Selection - Always visible -->
+      <div class="model-select-group visible" id="model-select-group" style="margin-bottom: 16px;">
+        <label style="font-size: 0.85em; color: var(--charcoal-light); margin-bottom: 6px; display: block;">Model (choose per recipe)</label>
+        <select id="claude-model">
+          <option value="claude-sonnet-4-20250514">⚡ Sonnet 4 — fast & cheap</option>
+          <option value="claude-opus-4-5-20251101">🧠 Opus 4.5 — complex recipes</option>
+        </select>
+      </div>
+
       <div class="api-key-section" id="api-key-section">
         <!-- Compact view (shown when key is saved) -->
         <div class="api-key-compact">
@@ -1199,14 +1208,6 @@
 
         <!-- Full view (shown when entering/editing key) -->
         <div class="api-key-full">
-          <!-- Model Selection -->
-          <div class="model-select-group visible" id="model-select-group">
-            <select id="claude-model">
-              <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (fast & capable)</option>
-              <option value="claude-opus-4-5-20251101">Claude Opus 4.5 (most capable)</option>
-            </select>
-          </div>
-
           <div class="input-group" id="api-key-group">
             <label id="api-key-label">Claude API Key</label>
             <input type="text" id="api-key" placeholder="Paste your Claude API key (sk-ant-...)">
