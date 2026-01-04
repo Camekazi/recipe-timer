@@ -1547,97 +1547,53 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
         currentInputMode === 'photo' ? 'Reading your recipe...' : 'Creating your cooking timer...';
 
       try {
-        // Build request based on input mode
-        let parts = [];
-
-        if (currentInputMode === 'photo') {
-          // Extract base64 data from data URL
-          const base64Data = selectedPhoto.split(',')[1];
-          const mimeType = selectedPhoto.split(';')[0].split(':')[1];
-
-          parts = [
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: base64Data
-              }
-            },
-            {
-              text: `Extract the recipe from this image and create a cooking timer. Return ONLY valid JSON, no markdown.
-
-Return this exact JSON structure:
-{
-  "title": "Recipe Name",
-  "totalMinutes": 30,
-  "steps": [
-    {"time": 0, "title": "Step name", "detail": "What to do", "duration": 300},
-    {"time": 300, "title": "Next step", "detail": "Instructions", "duration": 180}
-  ]
-}
-
-Rules:
-- time = seconds from start when step begins
-- duration = how long this step takes in seconds
-- Each step's time should equal previous step's time + duration
-- Include prep, cooking, and any resting time
-- Be realistic about timing
-- IMPORTANT: Each step should be ONE single action (not multiple)
-- Bad: "Chop onions, mince garlic, and slice peppers"
-- Good: Split into 3 separate steps: "Chop onions", "Mince garlic", "Slice peppers"
-- Keep each step title under 6 words
-- Keep each step detail under 80 characters`
-            }
-          ];
-        } else {
-          parts = [{
-            text: `Create a cooking timer for this recipe. Return ONLY valid JSON, no markdown.
-
-Recipe: ${recipeInput}
-
-Return this exact JSON structure:
-{
-  "title": "Recipe Name",
-  "totalMinutes": 30,
-  "steps": [
-    {"time": 0, "title": "Step name", "detail": "What to do", "duration": 300},
-    {"time": 300, "title": "Next step", "detail": "Instructions", "duration": 180}
-  ]
-}
-
-Rules:
-- time = seconds from start when step begins
-- duration = how long this step takes in seconds
-- Each step's time should equal previous step's time + duration
-- Include prep, cooking, and any resting time
-- Be realistic about timing
-- IMPORTANT: Each step should be ONE single action (not multiple)
-- Bad: "Chop onions, mince garlic, and slice peppers"
-- Good: Split into 3 separate steps: "Chop onions", "Mince garlic", "Slice peppers"
-- Keep each step title under 6 words
-- Keep each step detail under 80 characters`
-          }];
-        }
-
+        const claudeModel = document.getElementById('claude-model').value;
         let response, data, text;
 
-        // Claude API
-        const claudeModel = document.getElementById('claude-model').value;
-        const promptText = parts.find(p => p.text)?.text || '';
-        const imageData = parts.find(p => p.inlineData);
-
-        // Build message content
+        // Build Claude message content directly
         const content = [];
-        if (imageData) {
+        const jsonRules = `Return ONLY valid JSON, no markdown.
+
+Return this exact JSON structure:
+{
+  "title": "Recipe Name",
+  "totalMinutes": 30,
+  "steps": [
+    {"time": 0, "title": "Step name", "detail": "What to do", "duration": 300},
+    {"time": 300, "title": "Next step", "detail": "Instructions", "duration": 180}
+  ]
+}
+
+Rules:
+- time = seconds from start when step begins
+- duration = how long this step takes in seconds
+- Each step's time should equal previous step's time + duration
+- Include prep, cooking, and any resting time
+- Be realistic about timing
+- IMPORTANT: Each step should be ONE single action (not multiple)
+- Bad: "Chop onions, mince garlic, and slice peppers"
+- Good: Split into 3 separate steps: "Chop onions", "Mince garlic", "Slice peppers"
+- Keep each step title under 6 words
+- Keep each step detail under 80 characters`;
+
+        if (currentInputMode === 'photo') {
+          // Add image first, then prompt
+          const base64Data = selectedPhoto.split(',')[1];
+          const mimeType = selectedPhoto.split(';')[0].split(':')[1];
           content.push({
             type: 'image',
-            source: {
-              type: 'base64',
-              media_type: imageData.inlineData.mimeType,
-              data: imageData.inlineData.data
-            }
+            source: { type: 'base64', media_type: mimeType, data: base64Data }
+          });
+          content.push({
+            type: 'text',
+            text: `Extract the recipe from this image and create a cooking timer. ${jsonRules}`
+          });
+        } else {
+          content.push({
+            type: 'text',
+            text: `Create a cooking timer for this recipe. Recipe: ${recipeInput}\n\n${jsonRules}`
           });
         }
-        content.push({ type: 'text', text: promptText });
 
         response = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
