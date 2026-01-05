@@ -1469,20 +1469,32 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
-        // Find voice
-        const britishVoice = voices.find(v =>
-          v.lang === 'en-GB' && v.name.includes('Daniel')
-        ) || voices.find(v =>
-          v.lang === 'en-GB'
-        ) || voices.find(v =>
-          v.lang.startsWith('en')
-        );
+        // Log available voices for debugging
+        const enVoices = voices.filter(v => v.lang.startsWith('en'));
+        showVoiceDebug(`EN voices: ${enVoices.map(v => v.name.substring(0,15)).join(', ')}`);
+
+        // Find British voice - try multiple patterns
+        const britishVoice =
+          // Apple voices (macOS/iOS)
+          voices.find(v => v.lang === 'en-GB' && v.name.includes('Daniel')) ||
+          // Google UK voices (Chrome/Android) - prefer male for Gordon-style
+          voices.find(v => v.name.includes('Google UK English Male')) ||
+          voices.find(v => v.name.includes('UK English Male')) ||
+          // Google UK female as backup
+          voices.find(v => v.name.includes('Google UK English')) ||
+          voices.find(v => v.name.includes('UK English')) ||
+          // Any en-GB voice
+          voices.find(v => v.lang === 'en-GB') ||
+          // Any en_GB (underscore variant)
+          voices.find(v => v.lang === 'en_GB') ||
+          // Fallback to any English
+          voices.find(v => v.lang.startsWith('en'));
 
         if (britishVoice) {
           utterance.voice = britishVoice;
-          showVoiceDebug(`Voice: ${britishVoice.name}`);
+          showVoiceDebug(`Using: ${britishVoice.name} (${britishVoice.lang})`);
         } else {
-          showVoiceDebug('Voice: system default');
+          showVoiceDebug('Voice: system default (no en-GB found)');
         }
 
         utterance.onerror = (e) => {
