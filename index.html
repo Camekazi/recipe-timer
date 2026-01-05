@@ -866,26 +866,32 @@
       position: relative;
     }
 
-    .current-step .duration {
+    .current-step .step-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       margin-top: 20px;
-      font-size: 1.2em;
+      position: relative;
+      flex-wrap: wrap;
+    }
+
+    .current-step .duration {
+      font-size: 1.1em;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-      position: relative;
       display: flex;
-      width: fit-content;
       align-items: center;
       gap: 8px;
       background: rgba(255, 255, 255, 0.15);
-      padding: 10px 18px;
+      padding: 10px 16px;
       border-radius: 12px;
+      flex-shrink: 0;
     }
 
     .current-step .step-actions {
       display: flex;
-      justify-content: flex-end;
-      margin-top: 16px;
-      position: relative;
+      flex-shrink: 0;
     }
 
     .current-step .done-btn {
@@ -2240,11 +2246,18 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
       }
 
       const isLastStep = currentIndex === steps.length - 1;
+      // Build footer with time remaining + done button on same row
+      const hasTimeRemaining = remaining > 0;
+      const hasNextStep = !isLastStep;
+      const showFooter = hasTimeRemaining || hasNextStep;
+
       document.getElementById('current-step').innerHTML = `
         <h2>${current.title}</h2>
         <p>${current.detail}</p>
-        ${remaining > 0 ? `<div class="duration">⏱ ${formatTime(Math.max(0, remaining))} remaining</div>` : ''}
-        ${!isLastStep ? `<div class="step-actions"><button class="done-btn" onclick="skipCurrentStep()">✓ Done — Next Step</button></div>` : ''}
+        ${showFooter ? `<div class="step-footer">
+          ${hasTimeRemaining ? `<div class="duration">⏱ ${formatTime(Math.max(0, remaining))} remaining</div>` : ''}
+          ${hasNextStep ? `<div class="step-actions"><button class="done-btn" onclick="skipCurrentStep()">✓ Done — Next Step</button></div>` : ''}
+        </div>` : ''}
       `;
 
       const upcomingEl = document.getElementById('upcoming-steps');
