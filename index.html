@@ -1201,24 +1201,21 @@
         </select>
       </div>
 
-      <!-- OpenAI Voice Selection -->
-      <div class="model-select-group visible" style="margin-bottom: 16px;">
-        <label style="font-size: 0.85em; color: var(--charcoal-light); margin-bottom: 6px; display: block;">Voice (tap 🔊 during cooking)</label>
+      <!-- OpenAI Voice Selection (hidden - set via console: localStorage.setItem('openaiVoice', 'onyx')) -->
+      <div class="model-select-group visible" style="display: none;">
         <select id="openai-voice">
-          <option value="onyx">🔥 Onyx — deep, authoritative (Gordon-like)</option>
-          <option value="echo">⚡ Echo — intense, commanding</option>
-          <option value="fable">📖 Fable — warm, expressive</option>
-          <option value="alloy">🎯 Alloy — balanced, neutral</option>
-          <option value="nova">✨ Nova — friendly, upbeat</option>
-          <option value="shimmer">🌊 Shimmer — clear, gentle</option>
+          <option value="onyx">Onyx</option>
+          <option value="echo">Echo</option>
+          <option value="fable">Fable</option>
+          <option value="alloy">Alloy</option>
+          <option value="nova">Nova</option>
+          <option value="shimmer">Shimmer</option>
         </select>
       </div>
 
-      <!-- OpenAI API Key -->
-      <div class="input-group" style="margin-bottom: 20px;">
-        <label>OpenAI API Key (for voice)</label>
+      <!-- OpenAI API Key (hidden - set via console: localStorage.setItem('openaiApiKey', 'sk-...')) -->
+      <div class="input-group" style="display: none;">
         <input type="text" id="openai-key" placeholder="sk-...">
-        <small>Get key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a> · ~3p per recipe</small>
       </div>
 
       <div class="api-key-section" id="api-key-section">
