@@ -2040,6 +2040,11 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
         // Adjust startTime so elapsed equals the next step's start time
         startTime = Date.now() - (nextStep.time * 1000);
         storage.set('timerStartTime', startTime);
+
+        // Explicitly announce the new step
+        speak(nextStep.title + '. ' + nextStep.detail);
+        lastSpokenIndex = currentIndex + 1;
+
         updateDisplay();
       }
     }
