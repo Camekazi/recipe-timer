@@ -1502,22 +1502,33 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
     }
 
     // Debug helper - shows temporary message on screen (only in ?setup mode)
+    let debugMessages = [];
     function showVoiceDebug(msg) {
       console.log('[Voice Debug]', msg);
       // Only show visible debug in setup mode
       if (!isSetupMode) return;
 
+      // Append to message log (keep last 8 messages)
+      debugMessages.push(msg);
+      if (debugMessages.length > 8) debugMessages.shift();
+
       let debugEl = document.getElementById('voice-debug');
       if (!debugEl) {
         debugEl = document.createElement('div');
         debugEl.id = 'voice-debug';
-        debugEl.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;background:#333;color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;z-index:9999;max-height:100px;overflow:auto;';
+        debugEl.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;background:#333;color:#fff;padding:10px 14px;border-radius:8px;font-size:11px;z-index:9999;max-height:150px;overflow:auto;line-height:1.4;';
         document.body.appendChild(debugEl);
       }
-      debugEl.textContent = msg;
-      // Auto-hide after 5 seconds
+      // Show all messages with line breaks
+      debugEl.innerHTML = debugMessages.map(m => `→ ${m}`).join('<br>');
+      // Scroll to bottom
+      debugEl.scrollTop = debugEl.scrollHeight;
+      // Auto-hide after 10 seconds
       clearTimeout(debugEl._timeout);
-      debugEl._timeout = setTimeout(() => debugEl.remove(), 5000);
+      debugEl._timeout = setTimeout(() => {
+        debugEl.remove();
+        debugMessages = [];
+      }, 10000);
     }
 
     async function speakOpenAI(text) {
