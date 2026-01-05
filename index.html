@@ -1408,6 +1408,37 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
     let lastSpokenIndex = -1;
     let currentAudio = null;  // For OpenAI TTS playback
 
+    // Wake Lock - keeps screen on during cooking
+    let wakeLock = null;
+
+    async function requestWakeLock() {
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake Lock acquired - screen will stay on');
+          wakeLock.addEventListener('release', () => {
+            console.log('Wake Lock released');
+          });
+        } catch (err) {
+          console.log('Wake Lock failed:', err.message);
+        }
+      }
+    }
+
+    function releaseWakeLock() {
+      if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+      }
+    }
+
+    // Re-acquire wake lock when page becomes visible again
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && intervalId && !isPaused) {
+        await requestWakeLock();
+      }
+    });
+
     function toggleVoice() {
       voiceEnabled = !voiceEnabled;
       storage.set('voiceEnabled', voiceEnabled);
@@ -2114,6 +2145,9 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
       lastSpokenIndex = -1;
       updateVoiceButton();
 
+      // Keep screen on during cooking
+      requestWakeLock();
+
       renderTimeline();
       updateDisplay();
       intervalId = setInterval(updateDisplay, 1000);
@@ -2184,6 +2218,7 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
       storage.remove('timerPausedTime');
       storage.remove('activeRecipe');
       clearInterval(intervalId);
+      releaseWakeLock();
 
       // Reset UI without full reload (faster)
       document.getElementById('timer-section').style.display = 'none';
@@ -2231,6 +2266,7 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
         storage.remove('activeRecipe');
         storage.remove('timerStartTime');
         clearInterval(intervalId);
+        releaseWakeLock();  // Allow screen to sleep again
         return;
       }
 
