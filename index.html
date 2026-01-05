@@ -1202,7 +1202,7 @@
       </div>
 
       <!-- OpenAI Voice Selection (hidden - use ?setup URL to show) -->
-      <div class="model-select-group visible" style="display: none; margin-bottom: 16px;">
+      <div id="openai-voice-container" class="model-select-group visible" style="display: none; margin-bottom: 16px;">
         <label style="font-size: 0.85em; color: var(--charcoal-light); margin-bottom: 6px; display: block;">Voice Style</label>
         <select id="openai-voice">
           <option value="onyx">🔥 Onyx — deep, authoritative</option>
@@ -1215,7 +1215,7 @@
       </div>
 
       <!-- OpenAI API Key (hidden - use ?setup URL to show) -->
-      <div class="input-group" style="display: none; margin-bottom: 20px;">
+      <div id="openai-key-container" class="input-group" style="display: none; margin-bottom: 20px;">
         <label>OpenAI API Key (for voice)</label>
         <input type="text" id="openai-key" placeholder="sk-...">
         <small style="color: var(--olive);">Tap outside the field after pasting to save</small>
@@ -1490,10 +1490,9 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
       // Check for ?setup URL parameter to show OpenAI settings
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('setup') !== null) {
-        // Show the hidden OpenAI settings
-        document.querySelectorAll('#openai-voice, #openai-key').forEach(el => {
-          el.closest('div').style.display = 'block';
-        });
+        // Show the hidden OpenAI settings containers
+        document.getElementById('openai-voice-container').style.display = 'block';
+        document.getElementById('openai-key-container').style.display = 'block';
         // Make key input editable for setup
         const openaiInput = document.getElementById('openai-key');
         openaiInput.readOnly = false;
