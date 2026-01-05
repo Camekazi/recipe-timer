@@ -1315,6 +1315,7 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
 
   <!-- Controls -->
   <div class="controls" id="controls">
+    <button id="voice-btn" onclick="toggleVoice()">🔊 Voice</button>
     <button id="pause-btn" onclick="togglePause()">Pause</button>
     <button id="reset-btn" onclick="resetTimer()">Reset</button>
     <button id="new-btn" onclick="newRecipe()">New Recipe</button>
@@ -1337,6 +1338,46 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
     let currentInputMode = 'text';
     let selectedPhoto = null;
     let pendingResumeData = null;
+
+    // Voice/TTS
+    let voiceEnabled = storage.get('voiceEnabled') === 'true';
+    let lastSpokenIndex = -1;
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      storage.set('voiceEnabled', voiceEnabled);
+      updateVoiceButton();
+      if (voiceEnabled) {
+        // Speak current step when enabled
+        const elapsed = getElapsedSeconds();
+        const currentIndex = getCurrentStepIndex(elapsed);
+        if (currentIndex >= 0 && steps[currentIndex]) {
+          speak(steps[currentIndex].title + '. ' + steps[currentIndex].detail);
+          lastSpokenIndex = currentIndex;
+        }
+      } else {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function updateVoiceButton() {
+      const btn = document.getElementById('voice-btn');
+      if (btn) {
+        btn.textContent = voiceEnabled ? '🔊 Voice ON' : '🔇 Voice';
+        btn.style.background = voiceEnabled ? 'var(--olive)' : '';
+        btn.style.color = voiceEnabled ? 'white' : '';
+      }
+    }
+
+    function speak(text) {
+      if (!voiceEnabled || !window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.1;  // Slightly faster for Gordon energy
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
 
     // ==================== INIT ====================
     function maskApiKey(key) {
@@ -1765,6 +1806,10 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
 
       document.querySelector('h1').textContent = recipeTitle;
 
+      // Initialize voice
+      lastSpokenIndex = -1;
+      updateVoiceButton();
+
       renderTimeline();
       updateDisplay();
       intervalId = setInterval(updateDisplay, 1000);
@@ -1870,6 +1915,12 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
       const current = steps[currentIndex];
       const timeInStep = elapsed - current.time;
       const remaining = current.duration - timeInStep;
+
+      // Speak new step when it changes
+      if (currentIndex !== lastSpokenIndex) {
+        speak(current.title + '. ' + current.detail);
+        lastSpokenIndex = currentIndex;
+      }
 
       document.getElementById('current-step').innerHTML = `
         <h2>${current.title}</h2>
