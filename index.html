@@ -882,36 +882,31 @@
 
     .current-step .step-actions {
       display: flex;
-      gap: 12px;
-      margin-top: 20px;
+      justify-content: flex-end;
+      margin-top: 16px;
       position: relative;
     }
 
     .current-step .done-btn {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.2);
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      color: white;
-      padding: 14px 20px;
-      border-radius: 12px;
-      font-size: 1em;
-      font-weight: 700;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.85);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.8em;
+      font-weight: 600;
       font-family: inherit;
       cursor: pointer;
       transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
     }
 
     .current-step .done-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
     }
 
     .current-step .done-btn:active {
-      transform: scale(0.98);
+      transform: scale(0.97);
     }
 
     /* Upcoming Steps */
