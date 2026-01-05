@@ -2256,7 +2256,7 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
         <p>${current.detail}</p>
         ${showFooter ? `<div class="step-footer">
           ${hasTimeRemaining ? `<div class="duration">⏱ ${formatTime(Math.max(0, remaining))} remaining</div>` : ''}
-          ${hasNextStep ? `<div class="step-actions"><button class="done-btn" onclick="skipCurrentStep()">✓ Done — Next Step</button></div>` : ''}
+          ${hasNextStep ? `<div class="step-actions"><button class="done-btn" onclick="skipCurrentStep()">Next →</button></div>` : ''}
         </div>` : ''}
       `;
 
