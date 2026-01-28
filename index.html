@@ -1153,16 +1153,6 @@
 
     #pause-btn:active { transform: scale(0.95); }
 
-    #voice-btn {
-      background: var(--cream);
-      color: var(--charcoal);
-    }
-
-    #voice-btn.active {
-      background: var(--olive);
-      color: white;
-    }
-
     #reset-btn {
       background: var(--cream);
       color: var(--charcoal);
@@ -1235,26 +1225,6 @@
           <option value="claude-sonnet-4-20250514">⚡ Sonnet 4 — fast & cheap</option>
           <option value="claude-opus-4-5-20251101">🧠 Opus 4.5 — complex recipes</option>
         </select>
-      </div>
-
-      <!-- OpenAI Voice Selection (hidden - use ?setup URL to show) -->
-      <div id="openai-voice-container" class="model-select-group visible" style="display: none; margin-bottom: 16px;">
-        <label style="font-size: 0.85em; color: var(--charcoal-light); margin-bottom: 6px; display: block;">Voice Style</label>
-        <select id="openai-voice">
-          <option value="onyx">🔥 Onyx — deep, authoritative</option>
-          <option value="echo">⚡ Echo — intense, commanding</option>
-          <option value="fable">📖 Fable — warm, expressive</option>
-          <option value="alloy">🎯 Alloy — balanced, neutral</option>
-          <option value="nova">✨ Nova — friendly, upbeat</option>
-          <option value="shimmer">🌊 Shimmer — clear, gentle</option>
-        </select>
-      </div>
-
-      <!-- OpenAI API Key (hidden - use ?setup URL to show) -->
-      <div id="openai-key-container" class="input-group" style="display: none; margin-bottom: 20px;">
-        <label>OpenAI API Key (for voice)</label>
-        <input type="text" id="openai-key" placeholder="sk-...">
-        <small style="color: var(--olive);">Tap outside the field after pasting to save</small>
       </div>
 
       <div class="api-key-section" id="api-key-section">
@@ -1377,7 +1347,6 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
   <!-- Floating Controls (top-right, always visible during cooking) -->
   <div class="controls" id="controls">
     <button id="pause-btn" onclick="togglePause()" title="Pause/Resume">⏸</button>
-    <button id="voice-btn" onclick="toggleVoice()" title="Voice On/Off">🔇</button>
     <button id="reset-btn" onclick="resetTimer()" title="Reset Timer">↺</button>
     <button id="new-btn" onclick="newRecipe()" title="New Recipe">✕</button>
   </div>
@@ -1403,10 +1372,8 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
     let selectedPhoto = null;
     let pendingResumeData = null;
 
-    // Voice/TTS
-    let voiceEnabled = storage.get('voiceEnabled') === 'true';
-    let lastSpokenIndex = -1;
-    let currentAudio = null;  // For OpenAI TTS playback
+    // Audio beep
+    let lastBeepIndex = -1;
 
     // Wake Lock - keeps screen on during cooking
     let wakeLock = null;
@@ -1439,234 +1406,26 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
       }
     });
 
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      storage.set('voiceEnabled', voiceEnabled);
-      updateVoiceButton();
-      if (voiceEnabled) {
-        // Speak current step when enabled
-        const elapsed = getElapsedSeconds();
-        const currentIndex = getCurrentStepIndex(elapsed);
-        if (currentIndex >= 0 && steps[currentIndex]) {
-          speak(steps[currentIndex].title + '. ' + steps[currentIndex].detail);
-          lastSpokenIndex = currentIndex;
-        }
-      } else {
-        // Stop any playing audio
-        window.speechSynthesis.cancel();
-        if (currentAudio) {
-          currentAudio.pause();
-          currentAudio = null;
-        }
-      }
-    }
-
-    function updateVoiceButton() {
-      const btn = document.getElementById('voice-btn');
-      if (btn) {
-        btn.textContent = voiceEnabled ? '🔊' : '🔇';
-        btn.classList.toggle('active', voiceEnabled);
-      }
-    }
-
-    async function speak(text) {
-      if (!voiceEnabled) return;
-      await speakOpenAI(text);
-    }
-
-    function speakWebSpeech(text) {
-      if (!window.speechSynthesis) {
-        showVoiceDebug('Web Speech API not available!');
-        return;
-      }
-
-      showVoiceDebug('Web Speech fallback starting...');
-
-      // Chrome workaround: cancel, pause, resume pattern
-      window.speechSynthesis.cancel();
-
-      // Get voices
-      let voices = window.speechSynthesis.getVoices();
-
-      // Chrome loads voices async - wait if empty
-      if (voices.length === 0) {
-        showVoiceDebug('Voices not loaded, waiting...');
-        window.speechSynthesis.onvoiceschanged = () => {
-          voices = window.speechSynthesis.getVoices();
-          showVoiceDebug(`Voices loaded: ${voices.length}`);
-          doSpeak();
-        };
-        return;
-      }
-
-      function doSpeak() {
-        // Create fresh utterance each time
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.1;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-
-        // Log available voices for debugging
-        const enVoices = voices.filter(v => v.lang.startsWith('en'));
-        showVoiceDebug(`EN voices: ${enVoices.map(v => v.name.substring(0,15)).join(', ')}`);
-
-        // Find British voice - try multiple patterns
-        const britishVoice =
-          // Apple voices (macOS/iOS)
-          voices.find(v => v.lang === 'en-GB' && v.name.includes('Daniel')) ||
-          // Google UK voices (Chrome/Android) - prefer male for Gordon-style
-          voices.find(v => v.name.includes('Google UK English Male')) ||
-          voices.find(v => v.name.includes('UK English Male')) ||
-          // Google UK female as backup
-          voices.find(v => v.name.includes('Google UK English')) ||
-          voices.find(v => v.name.includes('UK English')) ||
-          // Any en-GB voice
-          voices.find(v => v.lang === 'en-GB') ||
-          // Any en_GB (underscore variant)
-          voices.find(v => v.lang === 'en_GB') ||
-          // Fallback to any English
-          voices.find(v => v.lang.startsWith('en'));
-
-        if (britishVoice) {
-          utterance.voice = britishVoice;
-          showVoiceDebug(`Using: ${britishVoice.name} (${britishVoice.lang})`);
-        } else {
-          showVoiceDebug('Voice: system default (no en-GB found)');
-        }
-
-        utterance.onerror = (e) => {
-          showVoiceDebug(`ERROR: ${e.error}`);
-        };
-
-        utterance.onstart = () => {
-          showVoiceDebug('🔊 Speaking...');
-        };
-
-        utterance.onend = () => {
-          showVoiceDebug('✓ Finished');
-        };
-
-        // Chrome mobile fix: must cancel, then speak, then resume if paused
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-
-        // Chrome bug: speech gets stuck in paused state - force resume
-        if (window.speechSynthesis.paused) {
-          showVoiceDebug('Was paused, resuming...');
-          window.speechSynthesis.resume();
-        }
-
-        // Chrome bug: sometimes stops after 15s, ping to keep alive
-        const keepAlive = setInterval(() => {
-          if (!window.speechSynthesis.speaking) {
-            clearInterval(keepAlive);
-          } else {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
-          }
-        }, 10000);
-
-        showVoiceDebug(`Queued. speaking=${window.speechSynthesis.speaking}`);
-      }
-
-      doSpeak();
-    }
-
-    // Debug helper - shows temporary message on screen (only in ?setup mode)
-    let debugMessages = [];
-    let debugCallId = 0;
-    function showVoiceDebug(msg, newCall = false) {
-      if (newCall) debugCallId++;
-      const taggedMsg = `[${debugCallId}] ${msg}`;
-      console.log('[Voice Debug]', taggedMsg);
-      // Only show visible debug in setup mode
-      if (!isSetupMode) return;
-
-      // Append to message log (keep last 10 messages)
-      debugMessages.push(taggedMsg);
-      if (debugMessages.length > 10) debugMessages.shift();
-
-      let debugEl = document.getElementById('voice-debug');
-      if (!debugEl) {
-        debugEl = document.createElement('div');
-        debugEl.id = 'voice-debug';
-        debugEl.style.cssText = 'position:fixed;bottom:80px;left:10px;right:10px;background:#333;color:#fff;padding:10px 14px;border-radius:8px;font-size:11px;z-index:9999;max-height:150px;overflow:auto;line-height:1.4;';
-        document.body.appendChild(debugEl);
-      }
-      // Show all messages with line breaks
-      debugEl.innerHTML = debugMessages.map(m => `→ ${m}`).join('<br>');
-      // Scroll to bottom
-      debugEl.scrollTop = debugEl.scrollHeight;
-      // Auto-hide after 10 seconds
-      clearTimeout(debugEl._timeout);
-      debugEl._timeout = setTimeout(() => {
-        debugEl.remove();
-        debugMessages = [];
-      }, 10000);
-    }
-
-    async function speakOpenAI(text) {
-      showVoiceDebug('--- speak() called ---', true);  // New call marker
-      const openaiKey = storage.get('openaiApiKey');
-      showVoiceDebug(`OpenAI key: ${openaiKey ? 'found (' + openaiKey.slice(0,7) + '...)' : 'NOT FOUND'}`);
-      if (!openaiKey) {
-        showVoiceDebug('No OpenAI key - falling back to Web Speech');
-        speakWebSpeech(text);
-        return;
-      }
-
-      // Stop previous audio
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio = null;
-      }
-
+    // Simple beep sound using Web Audio API
+    function playBeep() {
       try {
-        const voice = storage.get('openaiVoice') || 'onyx';
-        showVoiceDebug(`Calling OpenAI TTS (voice: ${voice})...`);
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
 
-        const response = await fetch('https://api.openai.com/v1/audio/speech', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'tts-1',
-            input: text,
-            voice: voice,
-            speed: 1.1  // Slightly faster for Gordon energy
-          })
-        });
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
 
-        if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`OpenAI TTS failed: ${response.status} - ${errText}`);
-        }
+        oscillator.frequency.value = 800; // 800Hz tone
+        oscillator.type = 'sine';
 
-        showVoiceDebug('OpenAI response OK, creating audio...');
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        currentAudio = new Audio(audioUrl);
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
 
-        // Add error handler for audio playback
-        currentAudio.onerror = (e) => {
-          showVoiceDebug(`Audio playback error: ${e.type}`);
-          speakWebSpeech(text);  // Fallback on playback error
-        };
-
-        await currentAudio.play();
-        showVoiceDebug('Audio playing!');
-
-        // Clean up URL after playback
-        currentAudio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          currentAudio = null;
-        };
-
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
       } catch (err) {
-        showVoiceDebug(`OpenAI error: ${err.message} - trying Web Speech`);
-        speakWebSpeech(text);  // Fallback
+        console.log('Beep sound not available');
       }
     }
 
@@ -1677,20 +1436,6 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
     }
 
     window.onload = function() {
-      // Check for ?setup URL parameter to show OpenAI settings
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('setup') !== null) {
-        // Show the hidden OpenAI settings containers
-        document.getElementById('openai-voice-container').style.display = 'block';
-        document.getElementById('openai-key-container').style.display = 'block';
-        // Make key input editable for setup
-        const openaiInput = document.getElementById('openai-key');
-        openaiInput.readOnly = false;
-        openaiInput.style.color = '';
-        openaiInput.value = '';
-        openaiInput.placeholder = 'Paste your OpenAI key here (sk-...)';
-      }
-
       // Check for saved Claude API key
       const savedKey = storage.get('claudeApiKey');
       if (savedKey) {
@@ -1700,37 +1445,6 @@ Example: Chicken stir fry with broccoli, bell peppers, and soy ginger sauce"></t
         input.style.color = '#888';
         collapseApiKey();
       }
-
-      // Check for saved OpenAI API key
-      const savedOpenAIKey = storage.get('openaiApiKey');
-      if (savedOpenAIKey) {
-        const input = document.getElementById('openai-key');
-        input.value = maskApiKey(savedOpenAIKey);
-        input.readOnly = true;
-        input.style.color = '#888';
-      }
-
-      // Restore OpenAI voice selection
-      const savedVoice = storage.get('openaiVoice');
-      if (savedVoice) {
-        document.getElementById('openai-voice').value = savedVoice;
-      }
-
-      // Save OpenAI voice when changed
-      document.getElementById('openai-voice').addEventListener('change', function() {
-        storage.set('openaiVoice', this.value);
-      });
-
-      // Save OpenAI key when entered (on blur)
-      document.getElementById('openai-key').addEventListener('blur', function() {
-        const val = this.value.trim();
-        if (val && !val.includes('••••') && val.startsWith('sk-')) {
-          storage.set('openaiApiKey', val);
-          this.value = maskApiKey(val);
-          this.readOnly = true;
-          this.style.color = '#888';
-        }
-      });
 
       // Check for active recipe (in-progress cooking)
       const activeRecipe = storage.get('activeRecipe');
@@ -2141,9 +1855,8 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
 
       document.querySelector('h1').textContent = recipeTitle;
 
-      // Initialize voice
-      lastSpokenIndex = -1;
-      updateVoiceButton();
+      // Initialize beep tracker
+      lastBeepIndex = -1;
 
       // Keep screen on during cooking
       requestWakeLock();
@@ -2205,9 +1918,9 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
         startTime = Date.now() - (nextStep.time * 1000);
         storage.set('timerStartTime', startTime);
 
-        // Speak directly (must be in user gesture context for mobile)
-        speak(nextStep.title + '. ' + nextStep.detail);
-        lastSpokenIndex = currentIndex + 1;
+        // Beep for new step (user gesture context for mobile)
+        playBeep();
+        lastBeepIndex = currentIndex + 1;
 
         updateDisplay();
       }
@@ -2275,10 +1988,10 @@ STYLE: Write like Gordon Ramsay coaching someone in his kitchen:
       const timeInStep = elapsed - current.time;
       const remaining = current.duration - timeInStep;
 
-      // Speak new step when it changes
-      if (currentIndex !== lastSpokenIndex) {
-        speak(current.title + '. ' + current.detail);
-        lastSpokenIndex = currentIndex;
+      // Beep when step changes
+      if (currentIndex !== lastBeepIndex) {
+        playBeep();
+        lastBeepIndex = currentIndex;
       }
 
       const isLastStep = currentIndex === steps.length - 1;
